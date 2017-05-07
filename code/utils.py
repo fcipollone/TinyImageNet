@@ -1,11 +1,9 @@
 import os
 import random
 import tensorflow as tf
-
+import math
 from os.path import join as pjoin
 import logging
-import math
-import random
 
 def initialize_model(session, model, train_dir):
     ckpt = tf.train.get_checkpoint_state(train_dir)

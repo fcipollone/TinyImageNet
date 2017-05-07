@@ -89,6 +89,8 @@ ENV/
 .ropeproject
 
 # FOLDERS
-data/
 .vscode/
+data/
+train/
+log/
 download/

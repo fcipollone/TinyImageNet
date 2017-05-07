@@ -16,16 +16,19 @@ def load_pickle(f):
     raise ValueError("invalid python version: {}".format(version))
 
 
-def load_tiny_imagenet(path, dtype=np.float32, subtract_mean=True):
+def load_tiny_imagenet(path, dtype=np.float32, subtract_mean=True, debug=False, debug_nclass=3):
     """
     Load TinyImageNet. Each of TinyImageNet-100-A, TinyImageNet-100-B, and
     TinyImageNet-200 have the same directory structure, so this can be used
     to load any of them.
 
+    Note: The original implementation loaded data as NCHW, I (tyler) changed it to NHWC
+
     Inputs:
     - path: String giving path to the directory to load.
     - dtype: numpy datatype used to load the data.
     - subtract_mean: Whether to subtract the mean training image.
+    - debug: Whether or not to load a small number of classes for debugging
 
     Returns: A dictionary with the following entries:
     - class_names: A list where class_names[i] is a list of strings giving the
@@ -53,10 +56,15 @@ def load_tiny_imagenet(path, dtype=np.float32, subtract_mean=True):
             wnid_to_words[wnid] = [w.strip() for w in words.split(',')]
     class_names = [wnid_to_words[wnid] for wnid in wnids]
 
+    if debug:
+        print('Debug is on! Only loading %d / %d training classes.'
+                  % (debug_nclass, len(wnids)))
+
     # Next load training data.
     X_train = []
     y_train = []
     for i, wnid in enumerate(wnids):
+        if debug and i == debug_nclass: break
         if (i + 1) % 20 == 0:
             print('loading training data for synset %d / %d'
                   % (i + 1, len(wnids)))
@@ -66,16 +74,15 @@ def load_tiny_imagenet(path, dtype=np.float32, subtract_mean=True):
             filenames = [x.split('\t')[0] for x in f]
         num_images = len(filenames)
 
-        X_train_block = np.zeros((num_images, 3, 64, 64), dtype=dtype)
+        X_train_block = np.zeros((num_images, 64, 64, 3), dtype=dtype)
         y_train_block = wnid_to_label[wnid] * \
                         np.ones(num_images, dtype=np.int64)
         for j, img_file in enumerate(filenames):
             img_file = os.path.join(path, 'train', wnid, 'images', img_file)
             img = imread(img_file)
-            if img.ndim == 2:
-        ## grayscale file
+            if img.ndim == 2:   ## grayscale file
                 img.shape = (64, 64, 1)
-            X_train_block[j] = img.transpose(2, 0, 1)
+            X_train_block[j] = img
         X_train.append(X_train_block)
         y_train.append(y_train_block)
 
@@ -84,6 +91,7 @@ def load_tiny_imagenet(path, dtype=np.float32, subtract_mean=True):
     y_train = np.concatenate(y_train, axis=0)
 
     # Next load validation data
+    print('loading validation data')
     with open(os.path.join(path, 'val', 'val_annotations.txt'), 'r') as f:
         img_files = []
         val_wnids = []
@@ -93,25 +101,26 @@ def load_tiny_imagenet(path, dtype=np.float32, subtract_mean=True):
             val_wnids.append(wnid)
         num_val = len(img_files)
         y_val = np.array([wnid_to_label[wnid] for wnid in val_wnids])
-        X_val = np.zeros((num_val, 3, 64, 64), dtype=dtype)
+        X_val = np.zeros((num_val, 64, 64, 3), dtype=dtype)
         for i, img_file in enumerate(img_files):
             img_file = os.path.join(path, 'val', 'images', img_file)
             img = imread(img_file)
             if img.ndim == 2:
                 img.shape = (64, 64, 1)
-            X_val[i] = img.transpose(2, 0, 1)
+            X_val[i] = img
 
     # Next load test images
     # Students won't have test labels, so we need to iterate over files in the
     # images directory.
+    print('loading testing data')
     img_files = os.listdir(os.path.join(path, 'test', 'images'))
-    X_test = np.zeros((len(img_files), 3, 64, 64), dtype=dtype)
+    X_test = np.zeros((len(img_files), 64, 64, 3), dtype=dtype)
     for i, img_file in enumerate(img_files):
         img_file = os.path.join(path, 'test', 'images', img_file)
         img = imread(img_file)
         if img.ndim == 2:
             img.shape = (64, 64, 1)
-        X_test[i] = img.transpose(2, 0, 1)
+        X_test[i] = img
 
     y_test = None
     y_test_file = os.path.join(path, 'test', 'test_annotations.txt')

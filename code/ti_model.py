@@ -33,40 +33,6 @@ def get_optimizer(opt):
     return optfn
 
 
-class ImageClassifier(object):
-    def __init__(self, FLAGS):
-        self.FLAGS = FLAGS
-
-    def image_classify(self, X, is_training):
-        """
-        NOTE: Data is in the format NCHW, not NHWC
-
-        param X: A batch of image data
-        param is_training: Whether or not this is a training or testing batch
-        return: tuple that contains the logits for the distributions of start and end token
-        """
-        # Just my model from CS231n Assignment 2
-        # Conv Layers
-        conv1 = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=3, stride=1, data_format='NCHW', padding='VALID', scope = "Conv1")
-        bn1 = tf.contrib.layers.batch_norm(conv1, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1")
-        mp1 = tf.nn.max_pool(bn1, [1,2,2,1], strides=[1,2,2,1], padding='VALID', data_format='NCHW', name="max_pool1")
-        
-        conv2 = tf.contrib.layers.conv2d(mp1, num_outputs=64, kernel_size=4, stride=1, data_format='NCHW', padding='VALID', scope = "Conv2")
-        bn2 = tf.contrib.layers.batch_norm(conv2, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2")
-        mp2 = tf.nn.max_pool(bn2, [1,2,2,1], strides=[1,2,2,1], padding='VALID', data_format='NCHW', name="max_pool2")
-        
-        conv3 = tf.contrib.layers.conv2d(mp2, num_outputs=32, kernel_size=5, stride=1, data_format='NCHW', padding='VALID', scope = "Conv3")
-        bn3 = tf.contrib.layers.batch_norm(conv3, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn3")
-        mp3 = tf.nn.max_pool(bn3, [1,2,2,1], strides=[1,2,2,1], padding='VALID', data_format='NCHW', name="max_pool3")
-        
-        # Affine Layers
-        h1_flat = tf.contrib.layers.flatten(mp3)
-        fc1 = tf.contrib.layers.fully_connected(inputs = h1_flat, num_outputs = 512, scope = "fc1")
-        raw_scores = tf.contrib.layers.fully_connected(inputs = fc1, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc2")
-
-        return raw_scores
-
-
 class Model(object):
     def __init__(self, classifier, FLAGS, *args):
         """
@@ -83,12 +49,12 @@ class Model(object):
 
         # # ==== set up placeholder tokens ======== 3d (because of batching)
         #self.dropout_placeholder = tf.placeholder(tf.float32, (), name="dropout_placeholder")
-        self.X = tf.placeholder(tf.float32, [None, 3, 64, 64], name="X")
+        self.X = tf.placeholder(tf.float32, [None, 64, 64, 3], name="X")
         self.y = tf.placeholder(tf.int64, [None], name="y")
         self.is_training = tf.placeholder(tf.bool, name="is_training")
 
         # ==== assemble pieces ====
-        with tf.variable_scope("classifier", initializer=tf.uniform_unit_scaling_initializer(1.0)):
+        with tf.variable_scope("model", initializer=tf.uniform_unit_scaling_initializer(1.0)):
             self.setup_system()
             self.setup_loss()
             self.setup_training_procedure()
@@ -116,11 +82,8 @@ class Model(object):
 
 
     def setup_system(self):
-        # Get classification scores
         with vs.variable_scope("classify"):
-            self.raw_scores = self.classifier.image_classify(self.X, self.is_training)
-        with vs.variable_scope("predict"):
-            self.y_out = tf.nn.softmax(self.raw_scores)
+            self.y_out = self.classifier.image_classify(self.X, self.is_training)
 
 
     def setup_loss(self):
@@ -134,10 +97,10 @@ class Model(object):
 
     def score(self, session, X_batch):
         """
-        Returns the probability distribution over different classes
-        so that other methods like self.answer() will be able to work properly
-
         NOT FOR TRAINING
+        
+        Returns the scores over different classes so that other methods
+        like self.answer() will be able to work properly       
         """
         input_feed = {}
 
@@ -145,52 +108,57 @@ class Model(object):
         input_feed[self.is_training] = False
         #input_feed[self.dropout_placeholder] = 1
 
-        output_feed = [self.y_out]    # Get the softmaxed outputs
+        output_feed = [self.y_out]    # Get the raw outputs
 
         outputs = session.run(output_feed, input_feed)
+        outputs = outputs[0]    # Run returns the outputfeed as a list. We just want the first element
 
-        return outputs
+        return np.array(outputs)
 
 
     def classify(self, session, X_batch):
-        # Returns: predicted class identifier
-        # NOT FOR TRAINING
+        '''
+        NOT FOR TRAINING
+
+        Returns: predicted class identifier
+        '''
+
         scores = self.score(session, X_batch)
         preds = np.argmax(scores, axis=1)
         return preds
 
-    def evaluate_model(self, session, dataset, sample=100, log=False):
+
+    def evaluate_model(self, session, dataset, sample_size):
         """
         :param session: session should always be centrally managed in train.py
         :param dataset: a representation of our data, in some implementations, you can
                         pass in multiple components (arguments) of one dataset to this function
         :param sample: how many examples in dataset we look at
         :param log: whether we print to std out stream
-        :return:
-            prediction accuracy
+        :return: prediction accuracy
         """
-        eval_set = random.sample(dataset, sample)
+        eval_set = random.sample(dataset, sample_size)
         batches, num_batches = get_batches(eval_set, self.FLAGS.batch_size)
 
         running_sum = 0
         for batch in batches:
             X_batch, y_batch = zip(*batch)
             preds = self.classify(session, X_batch)
-            correct_preds = tf.equal(preds, y_batch)
-            running_sum += tf.reduce_sum(tf.cast(correct_preds, tf.float32))
+            correct_preds = np.equal(preds, y_batch)
+            running_sum += np.sum(correct_preds)
 
-        accuracy = running_sum/float(len(eval_set))
+        accuracy = running_sum/sample_size
         return accuracy
 
 
     def optimize(self, session, batch):
         """
+        FOR TRAINING ONLY
+        
         Takes in actual data to optimize your model
         This method is equivalent to a step() function
         :return:
             loss, global_norm, global_step
-
-        FOR TRAINING ONLY
         """
         X_batch, y_batch = zip(*batch)    # Unzip batch, each returned element is a tuple of lists
 
@@ -225,75 +193,73 @@ class Model(object):
 
     def train(self, session, dataset):
         """
-        Implement main training loop
-        TIPS:
+        Main training loop
+
+        Tips:
         look into tf.train.exponential_decay)
         You should save your model per epoch.
         Implement early stopping
         Evaluate your training progress by printing out information
-
         We recommend you evaluate your model performance on accuracy instead of just loss
 
         :param session: it should be passed in from train.py
         :param dataset: A dictionary with the following entries:
                         - class_names: A list where class_names[i] is a list of strings giving the
                         WordNet names for class i in the loaded dataset.
-                        - X_train: (N_tr, 3, 64, 64) array of training images
+                        - X_train: (N_tr, 64, 64, 3) array of training images
                         - y_train: (N_tr,) array of training labels
-                        - X_val: (N_val, 3, 64, 64) array of validation images
+                        - X_val: (N_val, 64, 64, 3) array of validation images
                         - y_val: (N_val,) array of validation labels
-                        - X_test: (N_test, 3, 64, 64) array of testing images.
+                        - X_test: (N_test, 64, 64, 3) array of testing images.
                         - y_test: (N_test,) array of test labels; if test labels are not available
                         (such as in student code) then y_test will be None.
-                        - mean_image: (3, 64, 64) array giving mean training image
+                        - mean_image: (64, 64, 3) array giving mean training image
         """
+        # Setup Tensorboard
         if self.FLAGS.tb is True:
             tensorboard_path = os.path.join(self.FLAGS.log_dir, "tensorboard")
             self.tensorboard_writer = tf.summary.FileWriter(tensorboard_path, session.graph)
 
-        tic = time.time()
-        params = tf.trainable_variables()
-        num_params = sum(map(lambda t: np.prod(tf.shape(t.value()).eval()), params))
-        toc = time.time()
-        logging.info("Number of params: %d (retreival took %f secs)" % (num_params, toc - tic))
-
         #Info for saving models
         saver = tf.train.Saver()
-        if self.FLAGS.run_name == "":
-            rname = "{:%d-%m-%Y_%H:%M:%S}".format(datetime.now())
-        else:
-            rname = self.FLAGS.run_name
-
+        if self.FLAGS.run_name is "": rname = self.classifier.name()
+        else: rname = self.FLAGS.run_name
         checkpoint_path = os.path.join(self.FLAGS.train_dir, rname)
         early_stopping_path = os.path.join(checkpoint_path, "early_stopping")
 
-        train_data = zip(dataset["X_train"], dataset["y_train"])
-        val_data = zip(dataset["X_val"], dataset["y_val"])
+        # Setup conveinient handles on train and val sets
+        train_data = list(zip(dataset["X_train"], dataset["y_train"]))
+        val_data = list(zip(dataset["X_val"], dataset["y_val"]))
+
 
         num_data = len(train_data)
         best_acc = 0
         rolling_ave_window = 50
         losses = [10]*rolling_ave_window
-
+        
         # Epoch level loop
         for cur_epoch in range(self.FLAGS.epochs):
             batches, num_batches = get_batches(train_data, self.FLAGS.batch_size)
 
             # Training loop
-            for i, batch in enumerate(batches):
+            for _i, batch in enumerate(batches):
+                i = _i + 1  # For convienince
+
                 #Optimatize using batch
                 loss, norm, step = self.optimize(session, batch)
                 losses[step % rolling_ave_window] = loss
                 mean_loss = np.mean(losses)
 
                 #Print relevant params
-                num_complete = int(20*(self.FLAGS.batch_size*float(i+1)/num_data))
+                num_complete = int(20*(self.FLAGS.batch_size*i/num_data))
                 if not self.FLAGS.background:
                     sys.stdout.write('\r')
-                    sys.stdout.write("EPOCH: %d ==> (Avg Loss: [Train: %.3f][Val: %.3f] <--> Batch Loss: %.3f) [%-20s] (Completion:%d/%d) [norm: %.2f] [Step: %d]" % (cur_epoch + 1, mean_loss, mean_val_loss, loss, '='*num_complete, (i+1)*self.FLAGS.batch_size, num_data, norm, step))
+                    sys.stdout.write("EPOCH: %d ==> (Avg Loss: [Train: %.3f] <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
+                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, i*self.FLAGS.batch_size, num_data, norm, step))
                     sys.stdout.flush()
                 else:
-                    logging.info("EPOCH: %d ==> (Avg Loss: [Train: %.3f][Val: %.3f] <--> Batch Loss: %.3f) [%-20s] (Completion:%d/%d) [norm: %.2f] [Step: %d]" % (cur_epoch + 1, mean_loss, mean_val_loss, loss, '='*num_complete, (i+1)*self.FLAGS.batch_size, num_data, norm, step))
+                    logging.info("EPOCH: %d ==> (Avg Loss: [Train: %.3f] <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
+                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, i*self.FLAGS.batch_size, num_data, norm, step))
 
             sys.stdout.write('\n')
 
@@ -303,14 +269,17 @@ class Model(object):
             save_path = saver.save(session, os.path.join(checkpoint_path, "model.ckpt"), step)
             logging.info("Model checkpoint saved in file: %s" % save_path)
 
-            logging.info("---------- Evaluating on Train Set ----------")
-            self.evaluate_model(session, train_data, sample=self.FLAGS.eval_size, log=True)
-            logging.info("---------- Evaluating on Val Set ------------")
-            f1, em = self.evaluate_model(session, val_data, sample=self.FLAGS.eval_size, log=True)
+            logging.info("------ Evaluating on Train Set ------")
+            train_acc = self.evaluate_model(session, train_data, self.FLAGS.eval_size)
+            logging.info("Training Accuracy: %f" % (train_acc))
+            logging.info("------ Evaluating on Val Set --------")
+            val_acc = self.evaluate_model(session, val_data, self.FLAGS.eval_size)
+            logging.info("Validation Accuracy: %f" % (val_acc))
+            
 
-            # Save best model based on F1 (Early Stopping)
-            if acc > best_acc:
-                best_acc = acc
+            # Save best model based on accuracy (Early Stopping)
+            if val_acc > best_acc:
+                best_acc = val_acc
                 if not os.path.exists(early_stopping_path):
                     os.makedirs(early_stopping_path)
                 save_path = saver.save(session, os.path.join(early_stopping_path, "best_model.ckpt"))
