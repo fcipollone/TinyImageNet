@@ -1,5 +1,4 @@
 numpy
 joblib
-nltk >= 3.2.2
 tqdm
 pyprind

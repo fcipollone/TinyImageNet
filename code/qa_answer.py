@@ -14,11 +14,10 @@ import numpy as np
 from six.moves import xrange
 import tensorflow as tf
 
-from qa_model import Encoder, QASystem, Decoder
-from preprocessing.squad_preprocess import data_from_json, maybe_download, squad_base_url, \
-    invert_map, tokenize, token_idx_map
+from qa_model import ImageClassifier, Model
+from preprocessing.maybe_download import maybe_download
 import qa_data
-from utils import get_dataset, initialize_model, initialize_vocab, get_normalized_train_dir, pad_inputs, get_batches
+from utils import get_dataset
 
 import logging
 
@@ -28,23 +27,12 @@ tf.app.flags.DEFINE_float("learning_rate", 0.001, "Learning rate.")
 tf.app.flags.DEFINE_float("dropout", 0.15, "Fraction of units randomly dropped on non-recurrent connections.")
 tf.app.flags.DEFINE_integer("batch_size", 32, "Batch size to use during answering.")
 tf.app.flags.DEFINE_integer("epochs", 0, "Number of epochs to train.")
-tf.app.flags.DEFINE_integer("state_size", 150, "Size of each model layer.")
-tf.app.flags.DEFINE_integer("embedding_size", 300, "Size of the pretrained vocabulary.")
-tf.app.flags.DEFINE_integer("output_size", 750, "The output size of your model.")
-tf.app.flags.DEFINE_integer("keep", 0, "How many checkpoints to keep, 0 indicates keep all.")
+tf.app.flags.DEFINE_integer("output_size", 750, "The output size of your model.")   # ??
 tf.app.flags.DEFINE_string("train_dir", "train", "Training directory (default: ./train).")
 tf.app.flags.DEFINE_string("log_dir", "log", "Path to store log and flag files (default: ./log)")
-tf.app.flags.DEFINE_string("vocab_path", "data/squad/vocab.dat", "Path to vocab file (default: ./data/squad/vocab.dat)")
-tf.app.flags.DEFINE_string("embed_path", "", "Path to the trimmed GLoVe embedding (default: ./data/squad/glove.trimmed.{embedding_size}.npz)")
 tf.app.flags.DEFINE_string("dev_path", "data/squad/dev-v1.1.json", "Path to the JSON dev set to evaluate against (default: ./data/squad/dev-v1.1.json)")
-tf.app.flags.DEFINE_integer("max_paragraph_size", 300, "The length to cut paragraphs off at. MUST be the same as the model.")   # As per Frank's histogram.
-tf.app.flags.DEFINE_integer("max_question_size", 20, "The length to cut question off at. MUST be the same as the model.")   # As per Frank's histogram
-tf.app.flags.DEFINE_integer("max_answer_size", 15, "Maximum window of answers to search.")
 tf.app.flags.DEFINE_string("optimizer", "adam", "adam / sgd")
 tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this norm.")
-tf.app.flags.DEFINE_bool("search", False, "Whether to use advanced search methods")
-tf.app.flags.DEFINE_bool("bi_ans", False, "Whether to use advanced bidirectional ans-ptr method")
-tf.app.flags.DEFINE_bool("deep", False, "Whether to use advanced deep layer between match and ans-ptr")
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -53,45 +41,7 @@ def read_dataset(dataset, tier, vocab):
     and answer pointer in their own file. Returns the number
     of questions and answers processed for the dataset"""
 
-    context_data = []
-    query_data = []
-    question_uuid_data = []
-
-    for articles_id in tqdm(range(len(dataset['data'])), desc="Preprocessing {}".format(tier)):
-        article_paragraphs = dataset['data'][articles_id]['paragraphs']
-        for pid in range(len(article_paragraphs)):
-            context = article_paragraphs[pid]['context']
-            # The following replacements are suggested in the paper
-            # BidAF (Seo et al., 2016)
-            context = context.replace("''", '" ')
-            context = context.replace("``", '" ')
-
-            context_tokens = tokenize(context)
-
-            qas = article_paragraphs[pid]['qas']
-            for qid in range(len(qas)):
-                question = qas[qid]['question']
-                question_tokens = tokenize(question)
-                question_uuid = qas[qid]['id']
-
-                context_ids = [str(vocab.get(w, qa_data.UNK_ID)) for w in context_tokens]
-                qustion_ids = [str(vocab.get(w, qa_data.UNK_ID)) for w in question_tokens]
-
-                context_data.append(' '.join(context_ids))
-                query_data.append(' '.join(qustion_ids))
-                question_uuid_data.append(question_uuid)
-
     return context_data, query_data, question_uuid_data
-
-
-def prepare_dev(prefix, dev_filename, vocab):
-    # Don't check file size, since we could be using other datasets
-    dev_dataset = maybe_download(squad_base_url, dev_filename, prefix)
-
-    dev_data = data_from_json(os.path.join(prefix, dev_filename))
-    context_data, question_data, question_uuid_data = read_dataset(dev_data, 'dev', vocab)
-
-    return context_data, question_data, question_uuid_data
 
 
 def generate_answers(sess, model, dataset, rev_vocab):
@@ -117,9 +67,6 @@ def generate_answers(sess, model, dataset, rev_vocab):
     val_questions = [map(int, dataset["val_questions"][i].split()) for i in xrange(len(dataset["val_questions"]))]
     val_context = [map(int, dataset["val_context"][i].split()) for i in xrange(len(dataset["val_context"]))]
 
-    questions_padded, questions_masked = pad_inputs(val_questions, FLAGS.max_question_size)
-    context_padded, context_masked = pad_inputs(val_context, FLAGS.max_paragraph_size)
-
     answers = {}
 
     unified_dataset = zip(questions_padded, questions_masked, context_padded, context_masked, dataset["val_question_uuids"])
@@ -140,8 +87,6 @@ def generate_answers(sess, model, dataset, rev_vocab):
 
 
 def main(_):
-
-    vocab, rev_vocab = initialize_vocab(FLAGS.vocab_path)
 
     FLAGS.embed_path = FLAGS.embed_path or pjoin("data", "squad", "glove.trimmed.{}.npz".format(FLAGS.embedding_size))
 

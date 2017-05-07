@@ -20,67 +20,6 @@ def initialize_model(session, model, train_dir):
         logging.info('Num params: %d' % sum(v.get_shape().num_elements() for v in tf.trainable_variables()))
     return model
 
-def initialize_vocab(vocab_path):
-    if tf.gfile.Exists(vocab_path):
-        rev_vocab = []
-        with tf.gfile.GFile(vocab_path, mode="rb") as f:
-            rev_vocab.extend(f.readlines())
-        rev_vocab = [line.strip('\n') for line in rev_vocab]
-        vocab = dict([(x, y) for (y, x) in enumerate(rev_vocab)])
-        return vocab, rev_vocab
-    else:
-        raise ValueError("Vocabulary file %s not found.", vocab_path)
-
-def get_normalized_train_dir(train_dir):
-    """
-    Adds symlink to {train_dir} from /tmp/cs224n-squad-train to canonicalize the
-    file paths saved in the checkpoint. This allows the model to be reloaded even
-    if the location of the checkpoint files has moved, allowing usage with CodaLab.
-    This must be done on both train.py and qa_answer.py in order to work.
-    """
-    global_train_dir = '/tmp/cs224n-squad-train'
-    if os.path.exists(global_train_dir):
-        os.unlink(global_train_dir)
-    if not os.path.exists(train_dir):
-        os.makedirs(train_dir)
-    os.symlink(os.path.abspath(train_dir), global_train_dir)
-    return global_train_dir
-
-def convert_to_vocab_number(filename):
-    return_val = []
-    if tf.gfile.Exists(filename):
-        return_val = []
-        with tf.gfile.GFile(filename, mode="rb") as f:
-            return_val.extend(f.readlines())
-        return_val = [ [int(word) for word in line.strip('\n').split()] for line in return_val]
-        return return_val
-    else:
-        raise ValueError("Vocabulary file %s not found.", vocab_path)
-
-def convert_to_vocab_number_except_dont(filename):
-    return_val = []
-    if tf.gfile.Exists(filename):
-        return_val = []
-        with tf.gfile.GFile(filename, mode="rb") as f:
-            return_val.extend(f.readlines())
-        return_val = [ [word for word in line.strip('\n').split()] for line in return_val]
-        return return_val
-    else:
-        raise ValueError("Vocabulary file %s not found.", vocab_path)
-
-def pad_inputs(data, max_length):
-    padded_data = []
-    mask_data = []
-    for data in data:
-        length = len(data)
-        if length >= max_length:
-            padded_data.append(data[:max_length])
-            mask_data.append([1]*max_length)
-        else:
-            pad_length = max_length-length
-            padded_data.append(data + [0]*pad_length)
-            mask_data.append([1]*length + [0]*pad_length)
-    return padded_data, mask_data
 
 def get_dataset(data_dir, max_question_size, max_paragraph_size):
 
@@ -134,16 +73,6 @@ def variable_summaries(var):
     tf.summary.scalar('min', tf.reduce_min(var))
     tf.summary.histogram('histogram', var)
 
-def beta_summaries(var, name):
-  """Attach a lot of summaries to a Tensor (for TensorBoard visualization)."""
-  with tf.name_scope('beta_summaries'):
-    mean = tf.reduce_mean(var)
-    with tf.name_scope('stddev'):
-      stddev = tf.sqrt(tf.reduce_mean(tf.square(var - mean)))
-    tf.summary.scalar(name + '_stddev', stddev)
-    tf.summary.scalar(name + '_max', tf.reduce_max(var))
-    tf.summary.scalar(name + '_min', tf.reduce_min(var))
-    tf.summary.histogram(name + '_histogram', var)
 
 def get_batches(dataset, batch_size):
     random.shuffle(dataset)

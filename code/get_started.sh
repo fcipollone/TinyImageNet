@@ -3,6 +3,8 @@
 # and saves preprocessed data into ./data
 # Get directory containing this script
 
+# UPDATED FOR TINYIMAGENET
+
 CODE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 export PYTHONPATH=$PYTHONPATH:$CODE_DIR
@@ -14,17 +16,13 @@ if [ ! -d "/usr/local/share/nltk_data/tokenizers/punkt" ]; then
     python2 -m nltk.downloader punkt
 fi
 
-
-# SQuAD preprocess is in charge of downloading
-# and formatting the data to be consumed later
 DATA_DIR=data
 DOWNLOAD_DIR=download
 mkdir -p $DATA_DIR
 rm -rf $DATA_DIR
-python2 $CODE_DIR/preprocessing/squad_preprocess.py
 
 # Download distributed word representations
-python2 $CODE_DIR/preprocessing/dwr.py
+python2 $CODE_DIR/preprocessing/get_dataset.py
 
 # Data processing for TensorFlow
 python2 $CODE_DIR/qa_data.py
