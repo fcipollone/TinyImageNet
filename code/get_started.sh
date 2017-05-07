@@ -16,13 +16,6 @@ if [ ! -d "/usr/local/share/nltk_data/tokenizers/punkt" ]; then
     python -m nltk.downloader punkt
 fi
 
-DATA_DIR=data
-DOWNLOAD_DIR=download
-mkdir -p $DATA_DIR
-rm -rf $DATA_DIR
-
 # Download distributed word representations
 python $CODE_DIR/preprocessing/get_dataset.py
 
-# Data processing for TensorFlow
-python $CODE_DIR/qa_data.py
