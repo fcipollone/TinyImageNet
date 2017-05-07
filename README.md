@@ -1,7 +1,7 @@
-# SQUAD Reading Comprehension
+# TinyImageNet Competition
 
-### A Question Answering Model for the Stanford Question Answering Database (SQUAD)
-Welcome to the Stanford CS224N Project of Tyler Romero, Frank Cipollone, and Zach Barnes
+### A Question Answering Model for the Stanford TinyImageNet Competition
+Welcome to the Stanford CS231n Project of Tyler Romero, Frank Cipollone, and Zach Barnes
 
 The project has several dependencies that have to be satisfied before running the code. You can install them using your preferred method -- we list here the names of the packages using `pip`.
 
