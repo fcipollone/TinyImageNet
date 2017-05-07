@@ -13,7 +13,7 @@ pip install -r $CODE_DIR/requirements.txt
 
 # download punkt, perluniprops
 if [ ! -d "/usr/local/share/nltk_data/tokenizers/punkt" ]; then
-    python2 -m nltk.downloader punkt
+    python -m nltk.downloader punkt
 fi
 
 DATA_DIR=data
@@ -22,7 +22,7 @@ mkdir -p $DATA_DIR
 rm -rf $DATA_DIR
 
 # Download distributed word representations
-python2 $CODE_DIR/preprocessing/get_dataset.py
+python $CODE_DIR/preprocessing/get_dataset.py
 
 # Data processing for TensorFlow
-python2 $CODE_DIR/qa_data.py
+python $CODE_DIR/qa_data.py
