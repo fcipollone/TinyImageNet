@@ -252,37 +252,28 @@ class Model(object):
 
                 #Print relevant params
                 num_complete = int(20*(self.FLAGS.batch_size*i/num_data))
-                if not self.FLAGS.background:
+                if self.FLAGS.background:
+                    logging.info("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
+                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, i*self.FLAGS.batch_size, num_data, norm, step))
+                else:
                     sys.stdout.write('\r')
-                    sys.stdout.write("EPOCH: %d ==> (Avg Loss: [Train: %.3f] <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
+                    sys.stdout.write("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
                         % (cur_epoch + 1, mean_loss, loss, '='*num_complete, i*self.FLAGS.batch_size, num_data, norm, step))
                     sys.stdout.flush()
-                else:
-                    logging.info("EPOCH: %d ==> (Avg Loss: [Train: %.3f] <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
-                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, i*self.FLAGS.batch_size, num_data, norm, step))
-
             sys.stdout.write('\n')
 
-            #Save model after each epoch. Do we really want to do this? Maybe just save the best one?
-            if not os.path.exists(checkpoint_path):
-                os.makedirs(checkpoint_path)
-            save_path = saver.save(session, os.path.join(checkpoint_path, "model.ckpt"), step)
-            logging.info("Model checkpoint saved in file: %s" % save_path)
-
-            logging.info("------ Evaluating on Train Set ------")
+            # Evaluate accuracy
             train_acc = self.evaluate_model(session, train_data, self.FLAGS.eval_size)
             logging.info("Training Accuracy: %f" % (train_acc))
-            logging.info("------ Evaluating on Val Set --------")
             val_acc = self.evaluate_model(session, val_data, self.FLAGS.eval_size)
             logging.info("Validation Accuracy: %f" % (val_acc))
             
-
             # Save best model based on accuracy (Early Stopping)
             if val_acc > best_acc:
                 best_acc = val_acc
-                if not os.path.exists(early_stopping_path):
-                    os.makedirs(early_stopping_path)
-                save_path = saver.save(session, os.path.join(early_stopping_path, "best_model.ckpt"))
+                if not os.path.exists(checkpoint_path):
+                    os.makedirs(checkpoint_path)
+                save_path = saver.save(session, os.path.join(checkpoint_path, "model.ckpt"))
                 logging.info("New Best Validation Accuracy: %f !!! Best Model saved in file: %s" % (best_acc, save_path))
 
 
