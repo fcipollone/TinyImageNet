@@ -15,22 +15,11 @@ import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 from tensorflow.python.ops import variable_scope as vs
-
 from tensorflow.python.ops.nn import sparse_softmax_cross_entropy_with_logits
 
 from utils import get_batches
 
 logging.basicConfig(level=logging.INFO)
-
-
-def get_optimizer(opt):
-    if opt == "adam":
-        optfn = tf.train.AdamOptimizer
-    elif opt == "sgd":
-        optfn = tf.train.GradientDescentOptimizer
-    else:
-        assert (False)
-    return optfn
 
 
 class Model(object):
@@ -48,7 +37,6 @@ class Model(object):
         self.global_step = tf.Variable(int(0), trainable = False, name = "global_step")
 
         # # ==== set up placeholder tokens ======== 3d (because of batching)
-        #self.dropout_placeholder = tf.placeholder(tf.float32, (), name="dropout_placeholder")
         self.X = tf.placeholder(tf.float32, [None, 64, 64, 3], name="X")
         self.y = tf.placeholder(tf.int64, [None], name="y")
         self.is_training = tf.placeholder(tf.bool, name="is_training")
@@ -59,41 +47,38 @@ class Model(object):
             self.setup_loss()
             self.setup_training_procedure()
 
-
-    def setup_training_procedure(self):
-        opt_function = get_optimizer(self.FLAGS.optimizer)  #Default is Adam
-        self.decayed_rate = tf.train.exponential_decay(self.learning_rate, self.global_step, decay_steps = 2000, decay_rate = 0.95, staircase=True)
-        optimizer = opt_function(self.decayed_rate)
-
-        grads_and_vars = optimizer.compute_gradients(self.loss, tf.trainable_variables())
-        grads = [g for g, v in grads_and_vars]
-        variables = [v for g, v in grads_and_vars]
-
-        clipped_grads, self.global_norm = tf.clip_by_global_norm(grads, self.FLAGS.max_gradient_norm)
-
-        # Batch Norm in tensorflow requires this extra dependency
-        extra_update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-        with tf.control_dependencies(extra_update_ops):
-            self.train_op = optimizer.apply_gradients(zip(clipped_grads, variables), global_step = self.global_step, name = "apply_clipped_grads")
-
-        self.learning_rate_tb = tf.summary.scalar("learning_rate", self.decayed_rate)
-        self.global_norm_tb = tf.summary.scalar("global_norm", self.global_norm)
+        # ==== setup saver ====
         self.saver = tf.train.Saver(tf.global_variables())
 
 
     def setup_system(self):
         with vs.variable_scope("classify"):
-            self.y_out = self.classifier.image_classify(self.X, self.is_training)
+            raw_scores = self.classifier.forward_pass(self.X, self.is_training)
+            self.y_out = tf.nn.softmax(raw_scores, name = "softmax")    # Apply softmax to raw output scores
+
+            with tf.name_scope('y_out_summaries'):
+                mean = tf.reduce_mean(self.y_out)
+                stddev = tf.sqrt(tf.reduce_mean(tf.square(self.y_out - mean)))
+                tf.summary.scalar('stddev', stddev)
+                tf.summary.scalar('max', tf.reduce_max(self.y_out))
+                tf.summary.scalar('min', tf.reduce_min(self.y_out))
 
 
     def setup_loss(self):
         with vs.variable_scope("loss"):
-            l = tf.nn.softmax_cross_entropy_with_logits(labels=tf.one_hot(self.y, self.FLAGS.n_classes),logits=self.y_out)
-            self.loss = tf.reduce_mean(l)
+            self.loss = self.classifier.loss(self.y)
 
             self.train_loss_tb = tf.summary.scalar("train_loss", self.loss)
             self.val_loss_tb = tf.summary.scalar("val_loss", self.loss)
 
+
+    def setup_training_procedure(self):
+        with vs.variable_scope("train_op"):
+            self.train_op, self.decayed_rate, self.global_norm = self.classifier.train_op(self.learning_rate, self.global_step, self.loss)
+
+            self.learning_rate_tb = tf.summary.scalar("learning_rate", self.decayed_rate)
+            self.global_norm_tb = tf.summary.scalar("global_norm", self.global_norm)
+        
 
     def score(self, session, X_batch):
         """
@@ -106,7 +91,6 @@ class Model(object):
 
         input_feed[self.X] = X_batch
         input_feed[self.is_training] = False
-        #input_feed[self.dropout_placeholder] = 1
 
         output_feed = [self.y_out]    # Get the raw outputs
 
@@ -128,7 +112,7 @@ class Model(object):
         return preds
 
 
-    def evaluate_model(self, session, dataset, sample_size):
+    def evaluate_model(self, session, dataset, sample_size=None):
         """
         :param session: session should always be centrally managed in train.py
         :param dataset: a representation of our data, in some implementations, you can
@@ -137,6 +121,9 @@ class Model(object):
         :param log: whether we print to std out stream
         :return: prediction accuracy
         """
+        if sample_size == None:
+            sample_size = len(dataset)
+
         eval_set = random.sample(dataset, sample_size)
         batches, num_batches = get_batches(eval_set, self.FLAGS.batch_size)
 
@@ -167,7 +154,6 @@ class Model(object):
         input_feed[self.X] = X_batch
         input_feed[self.y] = y_batch
         input_feed[self.is_training] = True
-        #input_feed[self.dropout_placeholder] = self.FLAGS.dropout
 
         output_feed = []
 
@@ -234,7 +220,7 @@ class Model(object):
 
         num_data = len(train_data)
         best_acc = 0
-        rolling_ave_window = 50
+        rolling_ave_window = 10
         losses = [10]*rolling_ave_window
         
         # Epoch level loop
@@ -254,22 +240,23 @@ class Model(object):
                 num_complete = int(20*(self.FLAGS.batch_size*i/num_data))
                 if self.FLAGS.background:
                     logging.info("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
-                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, i*self.FLAGS.batch_size, num_data, norm, step))
+                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, min(i*self.FLAGS.batch_size, num_data), num_data, norm, step))
                 else:
                     sys.stdout.write('\r')
                     sys.stdout.write("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
-                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, i*self.FLAGS.batch_size, num_data, norm, step))
+                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, min(i*self.FLAGS.batch_size, num_data), num_data, norm, step))
                     sys.stdout.flush()
             sys.stdout.write('\n')
 
             # Evaluate accuracy
-            train_acc = self.evaluate_model(session, train_data, self.FLAGS.eval_size)
-            logging.info("Training Accuracy: %f" % (train_acc))
-            val_acc = self.evaluate_model(session, val_data, self.FLAGS.eval_size)
-            logging.info("Validation Accuracy: %f" % (val_acc))
+            eval_size = min(len(val_data), len(train_data))
+            train_acc = self.evaluate_model(session, train_data, eval_size)
+            logging.info("Training Accuracy: %f \t\ton %d examples" % (train_acc, eval_size))
+            val_acc = self.evaluate_model(session, val_data, eval_size)
+            logging.info("Validation Accuracy: %f \ton %d examples" % (val_acc, eval_size))
             
             # Save best model based on accuracy (Early Stopping)
-            if val_acc > best_acc:
+            if val_acc > best_acc and self.FLAGS.debug == False:
                 best_acc = val_acc
                 if not os.path.exists(checkpoint_path):
                     os.makedirs(checkpoint_path)

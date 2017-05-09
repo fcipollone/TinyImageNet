@@ -88,9 +88,10 @@ ENV/
 # Rope project settings
 .ropeproject
 
-# FOLDERS
+# Additions
 .vscode/
 data/
 train/
 log/
 download/
+tromero1.txt

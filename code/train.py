@@ -16,13 +16,10 @@ logging.basicConfig(level=logging.INFO)
 # Hyperparameters
 tf.app.flags.DEFINE_float("learning_rate", 0.0005, "Learning rate.") # For CS224, we used 0.001
 tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this norm.")
-tf.app.flags.DEFINE_float("dropout", 0.5, "Fraction of units randomly dropped on non-recurrent connections.")
 tf.app.flags.DEFINE_integer("batch_size", 128, "Batch size to use during training.")    # Typically larger for cnns than rnns
 
 # Training Settings
-tf.app.flags.DEFINE_string("optimizer", "adam", "adam / sgd")
 tf.app.flags.DEFINE_integer("epochs", 15, "Number of epochs to train.")
-tf.app.flags.DEFINE_integer("eval_size", 2560, "The number of examples to evaluate on.")
 
 # Convenience
 tf.app.flags.DEFINE_string("classifier", "DemoClassifier", "The name of the classifier to use. For easily switching between classifiers.")
