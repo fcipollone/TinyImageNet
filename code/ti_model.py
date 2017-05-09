@@ -59,9 +59,8 @@ class Model(object):
             with tf.name_scope('y_out_summaries'):
                 mean = tf.reduce_mean(self.y_out)
                 stddev = tf.sqrt(tf.reduce_mean(tf.square(self.y_out - mean)))
-                tf.summary.scalar('stddev', stddev)
-                tf.summary.scalar('max', tf.reduce_max(self.y_out))
-                tf.summary.scalar('min', tf.reduce_min(self.y_out))
+                self.y_out_stddev_tb = tf.summary.scalar('stddev', stddev)
+                self.y_out_max_tb = tf.summary.scalar('max', tf.reduce_max(self.y_out))
 
 
     def setup_loss(self):
@@ -167,10 +166,14 @@ class Model(object):
             output_feed.append(self.train_loss_tb)
             output_feed.append(self.global_norm_tb)
             output_feed.append(self.learning_rate_tb)
-            tr, loss, norm, step, train_tb, norm_tb, lr_tb = session.run(output_feed, input_feed)
+            output_feed.append(self.y_out_stddev_tb)
+            output_feed.append(self.y_out_max_tb)
+            tr, loss, norm, step, train_tb, norm_tb, lr_tb, y_out_stddev_tb, y_out_max_tb = session.run(output_feed, input_feed)
             self.tensorboard_writer.add_summary(train_tb, step)
             self.tensorboard_writer.add_summary(norm_tb, step)
             self.tensorboard_writer.add_summary(lr_tb, step)
+            self.tensorboard_writer.add_summary(y_out_stddev_tb, step)
+            self.tensorboard_writer.add_summary(y_out_max_tb, step)
         else:
             tr, loss, norm, step = session.run(output_feed, input_feed)
 
@@ -239,11 +242,11 @@ class Model(object):
                 #Print relevant params
                 num_complete = int(20*(self.FLAGS.batch_size*i/num_data))
                 if self.FLAGS.background:
-                    logging.info("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
+                    logging.info("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (%d/%d) [norm: %.2f] [step: %d]"
                         % (cur_epoch + 1, mean_loss, loss, '='*num_complete, min(i*self.FLAGS.batch_size, num_data), num_data, norm, step))
                 else:
                     sys.stdout.write('\r')
-                    sys.stdout.write("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (Complete:%d/%d) [norm: %.2f] [step: %d]"
+                    sys.stdout.write("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (%d/%d) [norm: %.2f] [step: %d]"
                         % (cur_epoch + 1, mean_loss, loss, '='*num_complete, min(i*self.FLAGS.batch_size, num_data), num_data, norm, step))
                     sys.stdout.flush()
             sys.stdout.write('\n')
