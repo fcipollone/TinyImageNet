@@ -11,11 +11,6 @@ export PYTHONPATH=$PYTHONPATH:$CODE_DIR
 
 pip install -r $CODE_DIR/requirements.txt
 
-# download punkt, perluniprops
-if [ ! -d "/usr/local/share/nltk_data/tokenizers/punkt" ]; then
-    python -m nltk.downloader punkt
-fi
-
 # Download distributed word representations
 python $CODE_DIR/preprocessing/get_dataset.py
 
