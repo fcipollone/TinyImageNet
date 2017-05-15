@@ -11,6 +11,5 @@ export PYTHONPATH=$PYTHONPATH:$CODE_DIR
 
 pip install -r $CODE_DIR/requirements.txt
 
-# Download distributed word representations
 python $CODE_DIR/preprocessing/get_dataset.py
 
