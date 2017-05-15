@@ -242,6 +242,8 @@ class VeryDeepRes(ImageClassifier):
         conv1 = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=7, stride=2, data_format='NHWC', padding='SAME', scope = "Conv1")
         pool1 = tf.nn.max_pool(conv1, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool1")
 
+        #http://www.cv-foundation.org/openaccess/content_cvpr_2016/html/He_Deep_Residual_Learning_CVPR_2016_paper.html
+
         '''
         This is the structure of the actual networ, but I'm using the programmatic creation below
         conv1_1 = tf.contrib.layers.conv2d(pool1, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1_1")
