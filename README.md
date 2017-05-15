@@ -17,12 +17,10 @@ You can get started by downloading the datasets and doing dome basic preprocessi
 
 `$ code/get_started.sh`
 
-`$ python code/qa_data.py`
-
 Note that you will always want to run your code from the root directory of this repo. Not the code directory.
 This ensures that any files created in the process don't pollute the code directoy.
 
-This preprocessing step also creates Train, Val, and Dev sets. The Test set is held secret by SQUAD.
+This preprocessing step also creates Train, Val, and Test sets. The Test set answers are held secret by the competiton organizers.
 
 ## Training the Model
 
@@ -31,25 +29,21 @@ Once the data is downloaded and preprocessed, training can begin:
 `$ python code/train.py`
 
 You can use the flag `--help` to see potential arguements for training a model
-While training, occasionally the model will give a sample F1 and EM score based on the Val set.
+While training, occasionally the model will give sample accuracies for both the Train and Val sets.
 
 ## Evaluating the Model
 
 Evaluation is done on the Dev set.
 
-First, generate answers for the dev set questions:
+First, generate answers for the test set questions:
 
 `$ python code/qa_answer.py`
 
-Then, compare the model's answers to the ground thruth:
-
-`$ python code/evaluate.py`
-
-This will spit out a final F1 and EM score.
+Then submit to the TinyImageNet competition.
 
 ## Acknowledgements
 
-Our baseline model is based on [Machine Comprehension Using Match-LSTM and Answer Pointer](https://arxiv.org/abs/1608.07905)
+
 
 
 
