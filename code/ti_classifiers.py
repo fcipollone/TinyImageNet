@@ -7,6 +7,8 @@ def get_classifier(name, FLAGS):
         return AlexNet(FLAGS)
     elif name == GoogleNet(FLAGS).name():
         return GoogleNet(FLAGS)
+    elif name == TylerNet(FLAGS).name():
+        return TylerNet(FLAGS)
     else:
         raise Exception("InvalidClassifierError")
         
@@ -89,11 +91,12 @@ class AlexNet (ImageClassifier):
 
     def forward_pass(self, X, is_training):
         # Conv Layers
-        conv1 = tf.contrib.layers.conv2d(X, num_outputs=48, kernel_size=7, stride=4, data_format='NHWC', padding='SAME', scope = "Conv1")
-        mp1 = tf.nn.max_pool(conv1, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool1")
+        conv1 = tf.contrib.layers.conv2d(X, num_outputs=48, kernel_size=7, stride=2, data_format='NHWC', padding='SAME', scope = "Conv1")
+        conv1b = tf.contrib.layers.conv2d(conv1, num_outputs=48, kernel_size=5, stride=1, data_format='NHWC', padding='VALID', scope = "Conv1b")
+        mp1 = tf.nn.max_pool(conv1b, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool1")
         bn1 = tf.contrib.layers.batch_norm(mp1, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1")
 
-        conv2 = tf.contrib.layers.conv2d(mp1, num_outputs=128, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
+        conv2 = tf.contrib.layers.conv2d(bn1, num_outputs=128, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
         mp2 = tf.nn.max_pool(conv2, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool2")
         bn2 = tf.contrib.layers.batch_norm(mp2, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2")
         
@@ -104,8 +107,8 @@ class AlexNet (ImageClassifier):
         
         # Affine Layers
         h1_flat = tf.contrib.layers.flatten(mp3)
-        fc1 = tf.contrib.layers.fully_connected(inputs = h1_flat, num_outputs = 1024, scope = "fc1")
-        fc2 = tf.contrib.layers.fully_connected(inputs = fc1, num_outputs = 1024, scope = "fc2")
+        fc1 = tf.contrib.layers.fully_connected(inputs = h1_flat, num_outputs = 2048, scope = "fc1")
+        fc2 = tf.contrib.layers.fully_connected(inputs = fc1, num_outputs = 2048, scope = "fc2")
         self.raw_scores = tf.contrib.layers.fully_connected(inputs = fc2, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
@@ -131,6 +134,7 @@ class GoogleNet (ImageClassifier):
             conv1 = tf.contrib.layers.conv2d(X, num_outputs=b, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1")
             conv2 = tf.contrib.layers.conv2d(X, num_outputs=d, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
             mp1 = tf.nn.max_pool(X, [1,3,3,1], strides=[1,1,1,1], padding='SAME', data_format='NHWC', name="max_pool")
+
             conv4 = tf.contrib.layers.conv2d(conv1, num_outputs=c, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv4")
             conv5 = tf.contrib.layers.conv2d(conv2, num_outputs=e, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', scope = "Conv5")
             conv6 = tf.contrib.layers.conv2d(mp1, num_outputs=f, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv6")
@@ -188,3 +192,40 @@ class GoogleNet (ImageClassifier):
         l3 = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_labels, logits=self.stem2_scores)
         loss = tf.reduce_mean(l1) + 0.3*tf.reduce_mean(l2) + 0.3*tf.reduce_mean(l3)
         return loss
+
+
+class TylerNet (ImageClassifier):
+    def __init__(self, FLAGS):
+        super().__init__(FLAGS)
+
+    def name(self):
+        return "TylerNet"
+
+    def forward_pass(self, X, is_training):
+        # Conv Layers
+        nn = tf.contrib.layers.conv2d(X, num_outputs=48, kernel_size=4, stride=2, data_format='NHWC', padding='SAME', scope = "Conv1")
+        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool1")
+        # (?, 16, 16, 48)
+
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3")
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv4")
+        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool2")
+
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv5")
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv6")
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv7")
+        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool3")
+
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv8")
+        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool4")
+
+        # Classifier Output
+        _, H1, W1, _ = nn.shape
+        nn = tf.contrib.layers.flatten(nn)
+        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = 2048, scope = "fc_relu")
+        nn = tf.contrib.layers.dropout(nn, keep_prob = 0.6, is_training=is_training)
+        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
+
+        assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
+        return self.raw_scores

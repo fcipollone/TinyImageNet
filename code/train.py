@@ -14,7 +14,7 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 # Hyperparameters
-tf.app.flags.DEFINE_float("learning_rate", 0.0005, "Learning rate.") # For CS224, we used 0.001
+tf.app.flags.DEFINE_float("learning_rate", 5e-3, "Learning rate.") # For CS224, we used 0.001
 tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this norm.")
 tf.app.flags.DEFINE_integer("batch_size", 128, "Batch size to use during training.")    # Typically larger for cnns than rnns
 
