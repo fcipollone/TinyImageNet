@@ -9,6 +9,8 @@ def get_classifier(name, FLAGS):
         return GoogleNet(FLAGS)
     elif name == TylerNet(FLAGS).name():
         return TylerNet(FLAGS)
+    elif name == VeryDeepRes(FLAGS).name():
+        return VeryDeepRes(FLAGS)
     else:
         raise Exception("InvalidClassifierError")
         
@@ -229,3 +231,102 @@ class TylerNet (ImageClassifier):
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
+class VeryDeepRes(ImageClassifier):
+    def __init__(self, FLAGS):
+        super().__init__(FLAGS)
+
+    def name(self):
+        return "VeryDeepRes"
+
+    def forward_pass(self, X, is_training):
+        conv1 = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=7, stride=2, data_format='NHWC', padding='SAME', scope = "Conv1")
+        pool1 = tf.nn.max_pool(conv1, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool1")
+
+        #http://www.cv-foundation.org/openaccess/content_cvpr_2016/html/He_Deep_Residual_Learning_CVPR_2016_paper.html
+
+        '''
+        This is the structure of the actual networ, but I'm using the programmatic creation below
+        conv1_1 = tf.contrib.layers.conv2d(pool1, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1_1")
+        conv1_2 = tf.contrib.layers.conv2d(conv1_1, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1_2")
+        conv1_2 = conv1_2 + pool1
+        conv1_3 = tf.contrib.layers.conv2d(conv1_2, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1_3")
+        conv1_4 = tf.contrib.layers.conv2d(conv1_3, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1_4")
+        conv1_4 = conv1_4 + conv1_2
+        conv1_5 = tf.contrib.layers.conv2d(conv1_4, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1_5")
+        conv1_6 = tf.contrib.layers.conv2d(conv1_5, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1_6")
+        conv1_6 = conv1_6 + conv1_4
+
+        conv2_1 = tf.contrib.layers.conv2d(conv1_6, num_outputs=128, kernel_size=3, stride=2, data_format='NHWC', padding='SAME', scope = "Conv2_1")
+        conv2_2 = tf.contrib.layers.conv2d(conv2_1, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2_2")
+        conv2_2 = conv2_2 + tf.contrib.layers.conv2d(conv1_6, num_outputs=128, kernel_size=1, stride=2, data_format='NHWC', padding='SAME', scope = "res1")
+        conv2_3 = tf.contrib.layers.conv2d(conv2_2, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2_3")
+        conv2_4 = tf.contrib.layers.conv2d(conv2_3, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2_4")
+        conv2_4 = conv2_4 + conv2_2
+        conv2_5 = tf.contrib.layers.conv2d(conv2_4, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2_5")
+        conv2_6 = tf.contrib.layers.conv2d(conv2_5, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2_6")
+        conv2_6 = conv2_6 + conv2_4
+        conv2_7 = tf.contrib.layers.conv2d(conv2_6, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2_7")
+        conv2_8 = tf.contrib.layers.conv2d(conv2_7, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2_8")
+
+
+        conv3_1 = tf.contrib.layers.conv2d(conv2_8, num_outputs=256, kernel_size=3, stride=2, data_format='NHWC', padding='SAME', scope = "Conv3_1")
+        conv3_2 = tf.contrib.layers.conv2d(conv3_1, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3_2")
+        conv3_2 = conv3_2 + tf.contrib.layers.conv2d(conv2_8, num_outputs=256, kernel_size=1, stride=2, data_format='NHWC', padding='SAME', scope = "res2")
+        conv3_3 = tf.contrib.layers.conv2d(conv3_2, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3_3")
+        conv3_4 = tf.contrib.layers.conv2d(conv3_3, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3_4")
+        conv3_4 = conv3_4 + conv3_2
+        conv3_5 = tf.contrib.layers.conv2d(conv3_4, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3_5")
+        conv3_6 = tf.contrib.layers.conv2d(conv3_5, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3_6")
+        conv3_6 = conv3_6 + conv3_4
+        conv3_7 = tf.contrib.layers.conv2d(conv3_6, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3_7")
+        conv3_8 = tf.contrib.layers.conv2d(conv3_7, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3_8")
+
+        nn = conv3_8 + conv3_6
+
+        _, H1, W1, _ = nn.shape
+        nn = tf.contrib.layers.flatten(nn)
+        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = 2048, scope = "fc_relu")
+        nn = tf.contrib.layers.dropout(nn, keep_prob = 0.6, is_training=is_training)
+        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
+        '''
+        conv_layers = [pool1]
+        numFilters = [64,128,256]       #For tiny image net, it doesnt make sense to have more than 3 of these
+        numLayers = [4,6,4]  #These need to be even for the network to make sense
+        residualSource = 0
+        for i, el in enumerate(numFilters):
+            for layer in range(numLayers[i]):
+                scope = 'section' + str(i) + 'layer' + str(layer)
+                stride = 1
+                if layer == 0 and i != 0:
+                    stride = 2
+                if layer % 2 == 0:  #Adding in resnets e
+                    if (layer != 2 and i != 0) or (i==0 and layer != 0):
+                        conv_layers[-1] = conv_layers[-1] + conv_layers[residualSource]
+                        #print ("adding sum from this last one and number", residualSource)
+                        residualSource = len(conv_layers)-1
+                    elif (i!=0):
+                        conv_layers[-1] = conv_layers[-1] + tf.contrib.layers.conv2d(conv_layers[residualSource], num_outputs=el, kernel_size=1, stride=2, data_format='NHWC', padding='SAME', scope = scope+"res")
+                        #print ("adding sum from this last one and number", residualSource,"Using a conv layer with outputs",el)
+                        residualSource = len(conv_layers)-1
+                temp_conv = tf.contrib.layers.conv2d(conv_layers[-1], num_outputs=el, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', scope = scope)
+                conv_shape = tf.shape(temp_conv)
+                conv1_reshaped = tf.reshape(temp_conv, [-1, el])
+                batch1 = tf.contrib.layers.batch_norm(conv1_reshaped, is_training=is_training)
+                batch1_reshaped = tf.reshape(batch1, [-1,conv_shape[1],conv_shape[2],el])
+                conv_layers.append(batch1_reshaped)
+                #print ("appending a conv layer with outputs",el,"and stride",stride)
+        nn = conv_layers[-1]
+        nn = nn + conv_layers[residualSource]
+        _, H1, W1, _ = nn.shape
+        nn = tf.contrib.layers.flatten(nn)
+        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = 2048, scope = "fc_relu")
+        nn = tf.contrib.layers.dropout(nn, keep_prob = 0.6, is_training=is_training)
+        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
+
+        assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
+        return self.raw_scores
+
+
+
+
+
