@@ -91,7 +91,7 @@ class Model(object):
         input_feed[self.X] = X_batch
         input_feed[self.is_training] = False
 
-        output_feed = [self.y_out]    # Get the raw outputs
+        output_feed = [self.y_out]
 
         outputs = session.run(output_feed, input_feed)
         outputs = outputs[0]    # Run returns the outputfeed as a list. We just want the first element
