@@ -37,7 +37,7 @@ class Model(object):
         self.global_step = tf.Variable(int(0), trainable = False, name = "global_step")
 
         # # ==== set up placeholder tokens ======== 3d (because of batching)
-        self.X = tf.placeholder(tf.float32, [None, 64, 64, 3], name="X")
+        self.X = tf.placeholder(tf.float32, [None, FLAGS.img_H, FLAGS.img_W, FLAGS.img_C], name="X")
         self.y = tf.placeholder(tf.int64, [None], name="y")
         self.is_training = tf.placeholder(tf.bool, name="is_training")
 

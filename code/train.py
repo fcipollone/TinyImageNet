@@ -31,6 +31,7 @@ tf.app.flags.DEFINE_string("run_name", "", "A name to give the run. For checkpoi
 tf.app.flags.DEFINE_bool("tb", False, "Log Tensorboard Graph")
 tf.app.flags.DEFINE_bool("background", False, "Prettier logging if running in background")
 tf.app.flags.DEFINE_bool("debug", False, "Run on a small set of data for debugging.")
+tf.app.flags.DEFINE_bool("cifar", False, "Cifar Debug")
 tf.app.flags.DEFINE_integer("n_classes", 200, "The number of classes. Don't change.")
 
 FLAGS = tf.app.flags.FLAGS
@@ -53,11 +54,20 @@ def main(_):
     """
     print(vars(FLAGS))
 
-    print ("Loading Tiny-Imagenet Dataset")
-    dataset = load_tiny_imagenet(FLAGS.data_dir, is_training = True, dtype=np.float32, subtract_mean=True, debug=FLAGS.debug)
+    if(FLAGS.cifar):
+        print ("Loading Cifar10 Dataset")
+        dataset = get_CIFAR10_data(FLAGS.data_dir, subtract_mean=True)
+    else:
+        print ("Loading Tiny-Imagenet Dataset")
+        dataset = load_tiny_imagenet(FLAGS.data_dir, is_training = True, dtype=np.float32, subtract_mean=True, debug=FLAGS.debug)
+        print ("Number of Classes: ", len(dataset["class_names"]))
+        FLAGS.n_classes = len(dataset["class_names"])
 
-    print ("Number of Classes: ", len(dataset["class_names"]))
-    FLAGS.n_classes = len(dataset["class_names"])
+    #Store img sizes
+    FLAGS.img_H = dataset["X_train"].shape[1]
+    FLAGS.img_W = dataset["X_train"].shape[2]
+    FLAGS.img_C = dataset["X_train"].shape[3]
+    print ("Imgs are (" + str(FLAGS.img_H) + ", " + str(FLAGS.img_W) + ", " + str(FLAGS.img_C) + ")")
 
     print ("Creating '" + FLAGS.classifier + "'")
     classifier = get_classifier(FLAGS.classifier, FLAGS)
