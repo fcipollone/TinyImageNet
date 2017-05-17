@@ -273,7 +273,7 @@ class Model(object):
                 if not os.path.exists(checkpoint_path):
                     os.makedirs(checkpoint_path)
                 save_path = saver.save(session, os.path.join(checkpoint_path, "model.ckpt"))
-                logging.info("New Best Validation Accuracy: %f !!! Best Model saved in file: %s" % (best_acc, save_path))
+                logging.info("New Best Validation Accuracy: %f !!! Best Model saved in file: %s" % (best_val_acc, save_path))
 
             # Determine if we should decay learning rate
             if train_acc > best_train_acc:
