@@ -65,8 +65,7 @@ class ImageClassifier(object):
         """
 
         opt_function = tf.train.AdamOptimizer
-        decayed_lr = tf.train.exponential_decay(lr, step, decay_steps = 3910, decay_rate = 0.5, staircase=True) # Decay by half every 5 epochs. As per cs231n notes.
-        optimizer = opt_function(decayed_lr)
+        optimizer = opt_function(lr)
 
         grads_and_vars = optimizer.compute_gradients(loss, tf.trainable_variables())
         grads = [g for g, v in grads_and_vars]
@@ -79,7 +78,7 @@ class ImageClassifier(object):
         with tf.control_dependencies(extra_update_ops):
             train_op = optimizer.apply_gradients(zip(clipped_grads, variables), global_step = step, name = "apply_clipped_grads")
 
-        return train_op, decayed_lr, global_norm
+        return train_op, global_norm
 
 ################################################################################################################################
 

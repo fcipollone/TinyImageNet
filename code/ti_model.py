@@ -31,12 +31,14 @@ class Model(object):
         """
         self.classifier = classifier
         self.FLAGS = FLAGS
+        self.current_lr =  self.FLAGS.learning_rate
 
         # ==== set up variables ========
-        self.learning_rate = tf.Variable(float(self.FLAGS.learning_rate), trainable = False, name = "learning_rate")
+        # self.learning_rate = tf.Variable(float(self.FLAGS.learning_rate), trainable = False, name = "learning_rate")
         self.global_step = tf.Variable(int(0), trainable = False, name = "global_step")
 
         # # ==== set up placeholder tokens ======== 3d (because of batching)
+        self.learning_rate = tf.placeholder(tf.float32, name = "learning_rate")
         self.X = tf.placeholder(tf.float32, [None, 64, 64, 3], name="X")
         self.y = tf.placeholder(tf.int64, [None], name="y")
         self.is_training = tf.placeholder(tf.bool, name="is_training")
@@ -73,9 +75,9 @@ class Model(object):
 
     def setup_training_procedure(self):
         with vs.variable_scope("train_op"):
-            self.train_op, self.decayed_rate, self.global_norm = self.classifier.train_op(self.learning_rate, self.global_step, self.loss)
+            self.train_op, self.global_norm = self.classifier.train_op(self.learning_rate, self.global_step, self.loss)
 
-            self.learning_rate_tb = tf.summary.scalar("learning_rate", self.decayed_rate)
+            self.learning_rate_tb = tf.summary.scalar("learning_rate", self.learning_rate)
             self.global_norm_tb = tf.summary.scalar("global_norm", self.global_norm)
         
 
@@ -153,6 +155,7 @@ class Model(object):
         input_feed[self.X] = X_batch
         input_feed[self.y] = y_batch
         input_feed[self.is_training] = True
+        input_feed[self.learning_rate] = self.current_lr
 
         output_feed = []
 
@@ -220,9 +223,15 @@ class Model(object):
         train_data = list(zip(dataset["X_train"], dataset["y_train"]))
         val_data = list(zip(dataset["X_val"], dataset["y_val"]))
 
+        # Systematic learning rate decay
+        epochs_without_improvement = 0
+        max_epochs_without_improvement = 3  # Decay learning rate by decay ratio
+        decay_ratio = 1/float(5)
 
+        # Helper stuff
         num_data = len(train_data)
-        best_acc = 0
+        best_val_acc = 0
+        best_train_acc = 0
         rolling_ave_window = 10
         losses = [10]*rolling_ave_window
         
@@ -242,12 +251,12 @@ class Model(object):
                 #Print relevant params
                 num_complete = int(20*(self.FLAGS.batch_size*i/num_data))
                 if self.FLAGS.background:
-                    logging.info("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (%d/%d) [norm: %.2f] [step: %d]"
-                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, min(i*self.FLAGS.batch_size, num_data), num_data, norm, step))
+                    logging.info("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (%d/%d) [norm: %.2f] [lr: %f] [step: %d]"
+                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, min(i*self.FLAGS.batch_size, num_data), num_data, norm, self.current_lr, step))
                 else:
                     sys.stdout.write('\r')
-                    sys.stdout.write("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (%d/%d) [norm: %.2f] [step: %d]"
-                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, min(i*self.FLAGS.batch_size, num_data), num_data, norm, step))
+                    sys.stdout.write("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (%d/%d) [norm: %.2f] [lr: %f] [step: %d]"
+                        % (cur_epoch + 1, mean_loss, loss, '='*num_complete, min(i*self.FLAGS.batch_size, num_data), num_data, norm, self.current_lr, step))
                     sys.stdout.flush()
             sys.stdout.write('\n')
 
@@ -257,13 +266,22 @@ class Model(object):
             logging.info("Training Accuracy: %f \t\ton %d examples" % (train_acc, eval_size))
             val_acc = self.evaluate_model(session, val_data, eval_size)
             logging.info("Validation Accuracy: %f \ton %d examples" % (val_acc, eval_size))
-            
+
             # Save best model based on accuracy (Early Stopping)
-            if val_acc > best_acc and self.FLAGS.debug == False:
-                best_acc = val_acc
+            if val_acc > best_val_acc and self.FLAGS.debug == False:
+                best_val_acc = val_acc
                 if not os.path.exists(checkpoint_path):
                     os.makedirs(checkpoint_path)
                 save_path = saver.save(session, os.path.join(checkpoint_path, "model.ckpt"))
                 logging.info("New Best Validation Accuracy: %f !!! Best Model saved in file: %s" % (best_acc, save_path))
 
-
+            # Determine if we should decay learning rate
+            if train_acc > best_train_acc:
+                best_train_acc = train_acc
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+            
+            if epochs_without_improvement >= max_epochs_without_improvement:
+                self.current_lr *= decay_ratio
+                logging.info("Learning rate decayed to %f !!!" % (self.current_lr))
