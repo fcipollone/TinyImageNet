@@ -220,7 +220,7 @@ def load_tiny_imagenet(path, is_training=True, dtype=np.float32, subtract_mean=T
     }
 
 
-def augment(dataset, fliplr = True, blur = False, doRotation = True, doZoom = True, verbose = True):
+def augment(dataset, fliplr = True, blur = True, doRotation = True, verbose = True):
     X_train = dataset['X_train']
     y_train = dataset['y_train']    
 
