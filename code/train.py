@@ -32,6 +32,7 @@ tf.app.flags.DEFINE_bool("tb", False, "Log Tensorboard Graph")
 tf.app.flags.DEFINE_bool("background", False, "Prettier logging if running in background")
 tf.app.flags.DEFINE_bool("debug", False, "Run on a small set of data for debugging.")
 tf.app.flags.DEFINE_bool("cifar", False, "Cifar Debug")
+tf.app.flags.DEFINE_bool("augment", True, "Whether or not to expand dataset using data augmentation")
 tf.app.flags.DEFINE_integer("n_classes", 200, "The number of classes. Don't change.")
 
 FLAGS = tf.app.flags.FLAGS
@@ -62,6 +63,10 @@ def main(_):
         dataset = load_tiny_imagenet(FLAGS.data_dir, is_training = True, dtype=np.float32, subtract_mean=True, debug=FLAGS.debug)
         print ("Number of Classes: ", len(dataset["class_names"]))
         FLAGS.n_classes = len(dataset["class_names"])
+
+    if(FLAGS.augment):
+        print ("Performing Data Augmentation")
+        dataset = augment(dataset, fliplr = True, blur = True, verbose = True)
 
     #Store img sizes
     FLAGS.img_H = dataset["X_train"].shape[1]
