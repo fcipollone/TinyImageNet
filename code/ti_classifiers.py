@@ -9,6 +9,8 @@ def get_classifier(name, FLAGS):
         return GoogleNet(FLAGS)
     elif name == TylerNet(FLAGS).name():
         return TylerNet(FLAGS)
+    elif name == ResNet(FLAGS).name():
+        return ResNet(FLAGS)
     elif name == VeryDeepRes(FLAGS).name():
         return VeryDeepRes(FLAGS)
     else:
@@ -231,7 +233,71 @@ class TylerNet (ImageClassifier):
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
 
-        
+
+class ResNet (ImageClassifier):
+    def __init__(self, FLAGS):
+        super().__init__(FLAGS)
+
+    def name(self):
+        return "ResNet"
+
+    def ResLayer(self, x, filters, stride = 1, is_training = True, scope = "ResLayer"):
+        with vs.variable_scope(scope):
+            C = x.get_shape().as_list()[3]
+            nn = tf.contrib.layers.conv2d(x, num_outputs=filters, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', activation_fn = None)
+            nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+            nn = tf.nn.relu(nn)
+
+            nn = tf.contrib.layers.conv2d(nn, num_outputs=filters, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', activation_fn = None)
+            nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
+
+            if stride != 1 or filters != C:
+                print("Padding identity mapping to correct size")
+                x = tf.nn.avg_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='VALID', data_format='NHWC')
+                x = tf.pad(x, [[0,0], [0,0], [0,0], [(filters-C)//2, (filters-C)//2]])    # This is kind of weird
+
+            nn = x + nn     # Identity mapping plus residual connection
+            nn = tf.nn.relu(nn)
+
+            print("Image after " + scope + ":", nn.shape)
+            return nn
+
+    def forward_pass(self, X, is_training):
+        print("Imput image: ", X.shape)
+        nn = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=7, stride=1, data_format='NHWC', padding='SAME')
+        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
+        print("Image before residual layers :", nn.shape)
+
+        # Residual Layers
+        nn = self.ResLayer(nn, 64, is_training = is_training, scope = "ResLayer1")
+        nn = self.ResLayer(nn, 64, is_training = is_training, scope = "ResLayer2")
+        nn = self.ResLayer(nn, 64, is_training = is_training, scope = "ResLayer3")
+        nn = self.ResLayer(nn, 128, is_training = is_training, stride = 2, scope = "ResLayer4")
+        nn = self.ResLayer(nn, 128, is_training = is_training, scope = "ResLayer5")
+        nn = self.ResLayer(nn, 128, is_training = is_training, scope = "ResLayer6")
+        nn = self.ResLayer(nn, 128, is_training = is_training, scope = "ResLayer7")
+        nn = self.ResLayer(nn, 256, is_training = is_training, stride = 2, scope = "ResLayer8")
+        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer9")
+        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer10")
+        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer11")
+        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer12")
+        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer13")
+        nn = self.ResLayer(nn, 512, is_training = is_training, stride = 2, scope = "ResLayer14")
+        nn = self.ResLayer(nn, 512, is_training = is_training, scope = "ResLayer15")
+        nn = self.ResLayer(nn, 512, is_training = is_training, scope = "ResLayer16")
+
+        # Output Stem
+        _, H1, W1, _ = nn.shape
+        nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
+        nn = tf.contrib.layers.flatten(nn)
+        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
+
+        print("Output size :", self.raw_scores)
+        assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
+        return self.raw_scores
+
+
+
 class VeryDeepRes(ImageClassifier):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)

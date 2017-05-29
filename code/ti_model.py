@@ -224,9 +224,8 @@ class Model(object):
         val_data = list(zip(dataset["X_val"], dataset["y_val"]))
 
         # Systematic learning rate decay
-        epochs_without_improvement = 0
-        max_epochs_without_improvement = 1  # Decay learning rate by decay ratio
-        decay_ratio = 1/float(5)
+        decay_every = 5
+        decay_ratio = 1/float(2)
 
         # Helper stuff
         num_data = len(train_data)
@@ -275,13 +274,9 @@ class Model(object):
                 save_path = saver.save(session, os.path.join(checkpoint_path, "model.ckpt"))
                 logging.info("New Best Validation Accuracy: %f !!! Best Model saved in file: %s" % (best_val_acc, save_path))
 
-            # Determine if we should decay learning rate
-            if train_acc > best_train_acc:
-                best_train_acc = train_acc
-                epochs_without_improvement = 0
-            else:
-                epochs_without_improvement += 1
-            
-            if epochs_without_improvement >= max_epochs_without_improvement:
+            # Decay learning rate
+            if (cur_epoch % decay_every == 0) and (cur_epoch != 0):
                 self.current_lr *= decay_ratio
                 logging.info("Learning rate decayed to %f !!!" % (self.current_lr))
+
+                

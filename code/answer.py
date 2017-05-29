@@ -94,6 +94,12 @@ def main(_):
     print ("Loading Tiny-Imagenet Dataset")
     dataset = load_tiny_imagenet(FLAGS.data_dir, is_training = False, dtype=np.float32, subtract_mean=True, debug=FLAGS.debug)
 
+    #Store img sizes
+    FLAGS.img_H = dataset["X_train"].shape[1]
+    FLAGS.img_W = dataset["X_train"].shape[2]
+    FLAGS.img_C = dataset["X_train"].shape[3]
+    print ("Imgs are (" + str(FLAGS.img_H) + ", " + str(FLAGS.img_W) + ", " + str(FLAGS.img_C) + ")")
+
     # ========= Model-specific =========
     print ("Creating '" + FLAGS.classifier + "'")
     classifier = get_classifier(FLAGS.classifier, FLAGS)
