@@ -66,7 +66,7 @@ def main(_):
 
     if(FLAGS.augment):
         print ("Performing Data Augmentation")
-        dataset = augment(dataset, fliplr = True, blur = True, doRotation = True, verbose = True)
+        dataset = augment(dataset, fliplr = True, blur = False, doRotation = True, verbose = True)  # Using all of these results in a memory error
 
     #Store img sizes
     FLAGS.img_H = dataset["X_train"].shape[1]
