@@ -255,7 +255,7 @@ def augment(dataset, fliplr = True, blur = False, rotation = True, verbose = Tru
     return dataset
 
 
-// https://stackoverflow.com/questions/37119071/scipy-rotate-and-zoom-an-image-without-changing-its-dimensions
+# https://stackoverflow.com/questions/37119071/scipy-rotate-and-zoom-an-image-without-changing-its-dimensions
 def clipped_zoom(img, zoom_factor, **kwargs):
 
     h, w = img.shape[:2]
