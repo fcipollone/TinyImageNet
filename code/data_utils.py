@@ -220,13 +220,43 @@ def load_tiny_imagenet(path, is_training=True, dtype=np.float32, subtract_mean=T
     }
 
 
-def augment(dataset, fliplr = True, blur = False, rotation = True, verbose = True):
+def augment(dataset, fliplr = True, blur = False, doRotation = True, doZoom = True, verbose = True):
     X_train = dataset['X_train']
     y_train = dataset['y_train']    
 
     if verbose:
         N = X_train.shape[0]
         print(" - Pre augmentation size: " + str(N))
+    
+    '''
+    if doZoom:
+        N = X_train.shape[0]
+        
+        X_train_list = np.split(X_train , N)
+        X_train_zoom = []
+        for img in X_train_list:
+            zoomAmount = (np.random.rand(1) - 0.5) * 60   # Generate random numbers between 30 and -30
+            img_rotated = clipped_zoom(img, angle = degree, axes = (1, 2), reshape = False)
+            X_train_zoom.append(img_rotated)
+        X_train_zoom = np.concatenate(X_train_zoom, axis=0)
+
+        X_train = np.concatenate([X_train, X_train_zoom], axis=0)
+        y_train = np.concatenate([y_train, y_train], axis=0)
+    '''
+
+    if doRotation:
+        N = X_train.shape[0]
+        
+        X_train_list = np.split(X_train , N)
+        X_train_rotated = []
+        for img in X_train_list:
+            degree = (np.random.rand(1) - 0.5) * 60   # Generate random numbers between 30 and -30
+            img_rotated = rotate(img, angle = degree, axes = (1, 2), reshape = False)
+            X_train_rotated.append(img_rotated)
+        X_train_rotated = np.concatenate(X_train_rotated, axis=0)
+
+        X_train = np.concatenate([X_train, X_train_rotated], axis=0)
+        y_train = np.concatenate([y_train, y_train], axis=0)
 
     if fliplr:
         X_train_flipped = np.fliplr(X_train)
@@ -238,20 +268,6 @@ def augment(dataset, fliplr = True, blur = False, rotation = True, verbose = Tru
         X_train = np.concatenate([X_train, X_train_blurred], axis=0)
         y_train = np.concatenate([y_train, y_train], axis=0)
 
-    if rotation:
-        N = X_train.shape[0]
-        
-        X_train_list = np.split(X_train , N)
-        X_train_rotated = []
-        for img in X_train_list:
-            degree = (np.random.rand(1) - 0.5) * 60   # Generate random numbers between 30 and -30
-            img_rotated = rotate(X_train, angle = degree, axes = (1, 2), reshape = False)
-            X_train_rotated.append(img_rotated)
-        X_train_rotated = np.concatenate(X_train_rotated, axis=0)
-
-        X_train = np.concatenate([X_train, X_train_rotated], axis=0)
-        y_train = np.concatenate([y_train, y_train], axis=0)
-
     dataset['X_train'] = X_train
     dataset['y_train'] = y_train
 
@@ -261,7 +277,7 @@ def augment(dataset, fliplr = True, blur = False, rotation = True, verbose = Tru
 
     return dataset
 
-
+'''
 # https://stackoverflow.com/questions/37119071/scipy-rotate-and-zoom-an-image-without-changing-its-dimensions
 def clipped_zoom(img, zoom_factor, **kwargs):
 
@@ -301,3 +317,4 @@ def clipped_zoom(img, zoom_factor, **kwargs):
     else:
         out = img
     return out
+'''
