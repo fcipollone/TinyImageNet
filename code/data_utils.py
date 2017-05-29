@@ -240,8 +240,8 @@ def augment(dataset, fliplr = True, blur = False, rotation = True, verbose = Tru
 
     if rotation:
         N = X_train.shape[0]
-        rotations = (np.random.rand(N) - 0.5) * 60   # Generate random numbers between 30 and -30
-        X_train_rotated = rotate(X_train, angle = rotations, axes = (1, 2), reshape = False)
+        degrees = (np.random.rand(N) - 0.5) * 60   # Generate random numbers between 30 and -30
+        X_train_rotated = rotate(X_train, angle = degrees, axes = (1, 2), reshape = False)
         X_train = np.concatenate([X_train, X_train_rotated], axis=0)
         y_train = np.concatenate([y_train, y_train], axis=0)
 
