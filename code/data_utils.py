@@ -5,7 +5,7 @@ from six.moves import cPickle as pickle
 import numpy as np
 import os
 from scipy.misc import imread, imsave
-from scipy.ndimage import gaussian_filter
+from scipy.ndimage import gaussian_filter, rotate
 import platform
 from tqdm import tqdm
 
@@ -220,7 +220,7 @@ def load_tiny_imagenet(path, is_training=True, dtype=np.float32, subtract_mean=T
     }
 
 
-def augment(dataset, fliplr = True, blur = True, verbose = True):
+def augment(dataset, fliplr = True, blur = False, rotation = True, verbose = True):
     X_train = dataset['X_train']
     y_train = dataset['y_train']    
 
@@ -234,8 +234,15 @@ def augment(dataset, fliplr = True, blur = True, verbose = True):
         y_train = np.concatenate([y_train, y_train], axis=0)
 
     if blur:
-        X_train_blurred = gaussian_filter(X_train, sigma=3)
+        X_train_blurred = gaussian_filter(X_train, sigma=1)
         X_train = np.concatenate([X_train, X_train_blurred], axis=0)
+        y_train = np.concatenate([y_train, y_train], axis=0)
+
+    if rotation:
+        N = X_train.shape[0]
+        rotations = (np.random.rand(N) - 0.5) * 60   # Generate random numbers between 30 and -30
+        X_train_rotated = rotate(X_train, angle = rotations, axes = (1, 2), reshape = False)
+        X_train = np.concatenate([X_train, X_train_rotated], axis=0)
         y_train = np.concatenate([y_train, y_train], axis=0)
 
     dataset['X_train'] = X_train
@@ -246,3 +253,44 @@ def augment(dataset, fliplr = True, blur = True, verbose = True):
         print(" - Post augmentation size: " + str(N))
 
     return dataset
+
+
+// https://stackoverflow.com/questions/37119071/scipy-rotate-and-zoom-an-image-without-changing-its-dimensions
+def clipped_zoom(img, zoom_factor, **kwargs):
+
+    h, w = img.shape[:2]
+
+    # width and height of the zoomed image
+    zh = int(np.round(zoom_factor * h))
+    zw = int(np.round(zoom_factor * w))
+
+    # for multichannel images we don't want to apply the zoom factor to the RGB
+    # dimension, so instead we create a tuple of zoom factors, one per array
+    # dimension, with 1's for any trailing dimensions after the width and height.
+    zoom_tuple = (zoom_factor,) * 2 + (1,) * (img.ndim - 2)
+
+    # zooming out
+    if zoom_factor < 1:
+        # bounding box of the clip region within the output array
+        top = (h - zh) // 2
+        left = (w - zw) // 2
+        # zero-padding
+        out = np.zeros_like(img)
+        out[top:top+zh, left:left+zw] = zoom(img, zoom_tuple, **kwargs)
+
+    # zooming in
+    elif zoom_factor > 1:
+        # bounding box of the clip region within the input array
+        top = (zh - h) // 2
+        left = (zw - w) // 2
+        out = zoom(img[top:top+zh, left:left+zw], zoom_tuple, **kwargs)
+        # `out` might still be slightly larger than `img` due to rounding, so
+        # trim off any extra pixels at the edges
+        trim_top = ((out.shape[0] - h) // 2)
+        trim_left = ((out.shape[1] - w) // 2)
+        out = out[trim_top:trim_top+h, trim_left:trim_left+w]
+
+    # if zoom_factor == 1, just return the input array
+    else:
+        out = img
+    return out
