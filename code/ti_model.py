@@ -225,7 +225,7 @@ class Model(object):
 
         # Systematic learning rate decay
         epochs_without_improvement = 0
-        max_epochs_without_improvement = 3  # Decay learning rate by decay ratio
+        max_epochs_without_improvement = 1  # Decay learning rate by decay ratio
         decay_ratio = 1/float(5)
 
         # Helper stuff

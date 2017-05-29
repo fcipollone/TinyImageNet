@@ -230,6 +230,8 @@ class TylerNet (ImageClassifier):
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
+
+        
 class VeryDeepRes(ImageClassifier):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)
