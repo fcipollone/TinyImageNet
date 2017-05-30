@@ -94,7 +94,7 @@ def main(_):
     dataset = load_tiny_imagenet(FLAGS.data_dir, is_training = False, dtype=np.float32, subtract_mean=True, debug=FLAGS.debug)
 
     #Store img sizes
-    FLAGS.jitter = 8
+    jitter = 8
     FLAGS.img_H = dataset["X_test"].shape[1] - jitter
     FLAGS.img_W = dataset["X_test"].shape[2] - jitter
     FLAGS.img_C = dataset["X_test"].shape[3]

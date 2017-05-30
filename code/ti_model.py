@@ -254,7 +254,7 @@ class Model(object):
         num_data = len(train_data)
         best_val_acc = 0
         best_train_acc = 0
-        rolling_ave_window = 25
+        rolling_ave_window = 10
         losses = [10]*rolling_ave_window
         
         # Epoch level loop
