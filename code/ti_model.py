@@ -18,7 +18,7 @@ from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops.nn import sparse_softmax_cross_entropy_with_logits
 
 from utils import get_batches
-from data_utils import augment_batch
+from data_utils import augment_batch, crop_10
 
 logging.basicConfig(level=logging.INFO)
 
