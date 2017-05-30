@@ -118,8 +118,8 @@ class Model(object):
 
         scores = self.score(session, crops)
         overall_score = np.reduce_mean(scores, axis = 0)
-        preds = np.argmax(overall_score, axis=1)
-        return preds
+        pred = np.argmax(overall_score, axis=1)
+        return pred
 
 
     def classify(self, session, X_batch):
@@ -150,7 +150,7 @@ class Model(object):
 
         running_sum = 0
         for img, label in eval_set:
-            print(img.shape)
+            np.expand_dims(img, axis=0)
             pred = self.crop_classify(session, img)
             correct_pred = np.equal(pred, label)
             running_sum += np.sum(correct_pred)
