@@ -150,6 +150,7 @@ class Model(object):
 
         running_sum = 0
         for img, label in eval_set:
+            print(img.shape)
             pred = self.crop_classify(session, img)
             correct_pred = np.equal(pred, label)
             running_sum += np.sum(correct_pred)
