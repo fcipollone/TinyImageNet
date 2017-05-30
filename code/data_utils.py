@@ -307,13 +307,14 @@ def crop_10(image, H2, W2):
     halfGapH = gapH / 2
     halfGapW = gapW / 2
 
-    ul = X_train[:, :H2, :W2, :]   # Upper Left
-    br = X_train[:, gapH:, gapW:, :]   # Bottom Right
-    ur = X_train[:, :H2, gapW:, :]   # Upper Right
-    bl = X_train[:, gapW:, :W2, :]   # Bottom Left
-    c = X_train[:, halfGapH:-halfGapH, halfGapW:-halfGapW, :]   # Center
+    ul = image[:, :H2, :W2, :]   # Upper Left
+    br = image[:, gapH:, gapW:, :]   # Bottom Right
+    ur = image[:, :H2, gapW:, :]   # Upper Right
+    bl = image[:, gapW:, :W2, :]   # Bottom Left
+    c = image[:, halfGapH:-halfGapH, halfGapW:-halfGapW, :]   # Center
 
     X_train = np.concatenate([ul, br, ur, bl, c], axis=0)
+    assert(X_train.shape == (10, H2, W2, C1))
     return X_train
 
 
