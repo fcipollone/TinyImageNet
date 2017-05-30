@@ -70,6 +70,7 @@ def generate_answers(sess, model, dataset):
 
     answers = []
     for img, img_name in tqdm(test_data):
+        img = np.expand_dims(img, axis=0)
         pred = model.crop_classify(sess, img)
         answers.append((img_name, label_to_wnid[pred]))
 

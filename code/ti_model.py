@@ -117,8 +117,8 @@ class Model(object):
         crops = crop_10(image, self.FLAGS.img_H, self.FLAGS.img_W)
 
         scores = self.score(session, crops)
-        overall_score = np.mean(scores, axis = 0)
-        pred = np.argmax(overall_score, axis=1)
+        overall_score = np.mean(scores, axis=0)
+        pred = np.argmax(overall_score)
         return pred
 
 
