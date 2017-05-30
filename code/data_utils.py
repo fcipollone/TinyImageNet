@@ -8,6 +8,7 @@ from scipy.misc import imread, imsave
 from scipy.ndimage import gaussian_filter, rotate
 import platform
 from tqdm import tqdm
+import random
 
 def load_pickle(f):
     version = platform.python_version_tuple()
@@ -220,7 +221,7 @@ def load_tiny_imagenet(path, is_training=True, dtype=np.float32, subtract_mean=T
     }
 
 
-def augment(dataset, fliplr = True, blur = True, doRotation = True, verbose = True):
+def augment(dataset, fliplr = True, cropAndScale = True, doRotation = True, verbose = True):
     X_train = dataset['X_train']
     y_train = dataset['y_train']    
 
@@ -263,11 +264,6 @@ def augment(dataset, fliplr = True, blur = True, doRotation = True, verbose = Tr
         X_train = np.concatenate([X_train, X_train_flipped], axis=0)
         y_train = np.concatenate([y_train, y_train], axis=0)
 
-    if blur:
-        X_train_blurred = gaussian_filter(X_train, sigma=1)
-        X_train = np.concatenate([X_train, X_train_blurred], axis=0)
-        y_train = np.concatenate([y_train, y_train], axis=0)
-
     dataset['X_train'] = X_train
     dataset['y_train'] = y_train
 
@@ -277,44 +273,53 @@ def augment(dataset, fliplr = True, blur = True, doRotation = True, verbose = Tr
 
     return dataset
 
-'''
-# https://stackoverflow.com/questions/37119071/scipy-rotate-and-zoom-an-image-without-changing-its-dimensions
-def clipped_zoom(img, zoom_factor, **kwargs):
 
-    h, w = img.shape[:2]
+# Random crops and reflection
+def augment_batch(X_batch, H2, W2):
+    H1, W1, C1 = X_batch[0].shape
+    N = len(X_batch)
 
-    # width and height of the zoomed image
-    zh = int(np.round(zoom_factor * h))
-    zw = int(np.round(zoom_factor * w))
+    X_batch = np.stack(X_batch, axis=0)   # Make into one numpy array
 
-    # for multichannel images we don't want to apply the zoom factor to the RGB
-    # dimension, so instead we create a tuple of zoom factors, one per array
-    # dimension, with 1's for any trailing dimensions after the width and height.
-    zoom_tuple = (zoom_factor,) * 2 + (1,) * (img.ndim - 2)
 
-    # zooming out
-    if zoom_factor < 1:
-        # bounding box of the clip region within the output array
-        top = (h - zh) // 2
-        left = (w - zw) // 2
-        # zero-padding
-        out = np.zeros_like(img)
-        out[top:top+zh, left:left+zw] = zoom(img, zoom_tuple, **kwargs)
+    if random.random() > 0.5:   # 50-50 chance the batch is flipped
+        X_batch = np.fliplr(X_batch)
 
-    # zooming in
-    elif zoom_factor > 1:
-        # bounding box of the clip region within the input array
-        top = (zh - h) // 2
-        left = (zw - w) // 2
-        out = zoom(img[top:top+zh, left:left+zw], zoom_tuple, **kwargs)
-        # `out` might still be slightly larger than `img` due to rounding, so
-        # trim off any extra pixels at the edges
-        trim_top = ((out.shape[0] - h) // 2)
-        trim_left = ((out.shape[1] - w) // 2)
-        out = out[trim_top:trim_top+h, trim_left:trim_left+w]
+    gapH = H1 - H2
+    gapW = W1 - W2
 
-    # if zoom_factor == 1, just return the input array
-    else:
-        out = img
-    return out
-'''
+    randH = random.randint(0, gapH)
+    randW = random.randint(0, gapW)
+
+    X_batch = X_batch[:, gapH:gapH + H2, gapW:gapW + W2, :] # Random crop
+    return X_batch
+
+
+# Get ten crops of the image
+def crop_10(image, H2, W2):
+    _, H1, W1, C1 = image.shape
+
+    image_flipped = np.fliplr(image)
+    image = np.concatenate([image, image_flipped], axis=0)
+
+    gapH = H1 - H2
+    gapW = W1 - W2
+    halfGapH = gapH / 2
+    halfGapW = gapW / 2
+
+    ul = X_train[:, :H2, :W2, :]   # Upper Left
+    br = X_train[:, gapH:, gapW:, :]   # Bottom Right
+    ur = X_train[:, :H2, gapW:, :]   # Upper Right
+    bl = X_train[:, gapW:, :W2, :]   # Bottom Left
+    c = X_train[:, halfGapH:-halfGapH, halfGapW:-halfGapW, :]   # Center
+
+    X_train = np.concatenate([ul, br, ur, bl, c], axis=0)
+    return X_train
+
+
+    
+
+    
+
+        
+            

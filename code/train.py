@@ -14,12 +14,12 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 # Hyperparameters
-tf.app.flags.DEFINE_float("learning_rate", 5e-3, "Learning rate.") # For CS224, we used 0.001
+tf.app.flags.DEFINE_float("learning_rate", 1e-3, "Learning rate.") # For CS224, we used 0.001
 tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this norm.")
-tf.app.flags.DEFINE_integer("batch_size", 128, "Batch size to use during training.")    # Typically larger for cnns than rnns
+tf.app.flags.DEFINE_integer("batch_size", 256, "Batch size to use during training.")    # Typically larger for cnns than rnns
 
 # Training Settings
-tf.app.flags.DEFINE_integer("epochs", 15, "Number of epochs to train.")
+tf.app.flags.DEFINE_integer("epochs", 60, "Number of epochs to train.")
 
 # Convenience
 tf.app.flags.DEFINE_string("classifier", "DemoClassifier", "The name of the classifier to use. For easily switching between classifiers.")
@@ -64,14 +64,16 @@ def main(_):
         print ("Number of Classes: ", len(dataset["class_names"]))
         FLAGS.n_classes = len(dataset["class_names"])
 
-    if(FLAGS.augment):
-        print ("Performing Data Augmentation")
-        dataset = augment(dataset, fliplr = True, blur = False, doRotation = True, verbose = True)  # Using all of these results in a memory error
-
     #Store img sizes
-    FLAGS.img_H = dataset["X_train"].shape[1]
-    FLAGS.img_W = dataset["X_train"].shape[2]
     FLAGS.img_C = dataset["X_train"].shape[3]
+    if FLAGS.augment:
+        jitter = 8
+        FLAGS.img_H = dataset["X_train"].shape[1] - jitter
+        FLAGS.img_W = dataset["X_train"].shape[2] - jitter
+    else: 
+        FLAGS.img_H = dataset["X_train"].shape[1]
+        FLAGS.img_W = dataset["X_train"].shape[2]
+
     print ("Imgs are (" + str(FLAGS.img_H) + ", " + str(FLAGS.img_W) + ", " + str(FLAGS.img_C) + ")")
 
     print ("Creating '" + FLAGS.classifier + "'")

@@ -18,6 +18,7 @@ from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops.nn import sparse_softmax_cross_entropy_with_logits
 
 from utils import get_batches
+from data_utils import augment_batch
 
 logging.basicConfig(level=logging.INFO)
 
@@ -101,6 +102,26 @@ class Model(object):
         return np.array(outputs)
 
 
+    def crop_classify(self, session, image):
+        '''
+        NOT FOR TRAINING
+
+        Returns: predicted class identifier after
+            averageing softmax results from each
+            image in the collection.
+        
+        Intended for classifying crops of the same image
+        '''
+        assert(image.shape[0] == 1)
+
+        crops = crop_10(image)
+
+        scores = self.score(session, crops)
+        overall_score = np.reduce_mean(scores, axis = 0)
+        preds = np.argmax(overall_score, axis=1)
+        return preds
+
+
     def classify(self, session, X_batch):
         '''
         NOT FOR TRAINING
@@ -126,14 +147,12 @@ class Model(object):
             sample_size = len(dataset)
 
         eval_set = random.sample(dataset, sample_size)
-        batches, num_batches = get_batches(eval_set, self.FLAGS.batch_size)
 
         running_sum = 0
-        for batch in batches:
-            X_batch, y_batch = zip(*batch)
-            preds = self.classify(session, X_batch)
-            correct_preds = np.equal(preds, y_batch)
-            running_sum += np.sum(correct_preds)
+        for img, label in eval_set:
+            pred = self.crop_classify(session, img)
+            correct_pred = np.equal(pred, label)
+            running_sum += np.sum(correct_pred)
 
         accuracy = running_sum/sample_size
         return accuracy
@@ -149,6 +168,9 @@ class Model(object):
             loss, global_norm, global_step
         """
         X_batch, y_batch = zip(*batch)    # Unzip batch, each returned element is a tuple of lists
+
+        if(self.FLAGS.augment):
+            X_batch = augment_batch(X_batch, self.FLAGS.img_H, self.FLAGS.img_W)
 
         input_feed = {}
 
@@ -231,7 +253,7 @@ class Model(object):
         num_data = len(train_data)
         best_val_acc = 0
         best_train_acc = 0
-        rolling_ave_window = 10
+        rolling_ave_window = 25
         losses = [10]*rolling_ave_window
         
         # Epoch level loop

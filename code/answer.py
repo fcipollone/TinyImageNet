@@ -24,7 +24,7 @@ logging.basicConfig(level=logging.INFO)
 # Hyperparams
 tf.app.flags.DEFINE_float("learning_rate", 0.0005, "Learning rate.") # For CS224, we used 0.001
 tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this norm.")
-tf.app.flags.DEFINE_integer("batch_size", 128, "Batch size to use during training.")    # Typically larger for cnns than rnns
+tf.app.flags.DEFINE_integer("batch_size", 256, "Batch size to use during training.")    # Typically larger for cnns than rnns
 
 # Convenience
 tf.app.flags.DEFINE_string("classifier", "DemoClassifier", "The name of the classifier to use. For easily switching between classifiers.")
@@ -69,11 +69,9 @@ def generate_answers(sess, model, dataset):
     batches, num_batches = get_batches(test_data, FLAGS.batch_size)
 
     answers = []
-    for batch in tqdm(batches):
-        X_batch, batch_names = zip(*batch)
-        preds = model.classify(sess, X_batch)
-        for i in range(len(preds)):
-            answers.append((batch_names[i], label_to_wnid[preds[i]]))
+    for img, img_name in tqdm(test_data):
+        pred = model.crop_classify(sess, img)
+        answers.append((img_name, label_to_wnid[pred]))
 
     print ("Generated {}/{} Answers".format(len(answers), len(test_data)))
     return process_answers(answers)
@@ -95,8 +93,9 @@ def main(_):
     dataset = load_tiny_imagenet(FLAGS.data_dir, is_training = False, dtype=np.float32, subtract_mean=True, debug=FLAGS.debug)
 
     #Store img sizes
-    FLAGS.img_H = dataset["X_test"].shape[1]
-    FLAGS.img_W = dataset["X_test"].shape[2]
+    FLAGS.jitter = 8
+    FLAGS.img_H = dataset["X_test"].shape[1] - jitter
+    FLAGS.img_W = dataset["X_test"].shape[2] - jitter
     FLAGS.img_C = dataset["X_test"].shape[3]
     print ("Imgs are (" + str(FLAGS.img_H) + ", " + str(FLAGS.img_W) + ", " + str(FLAGS.img_C) + ")")
 
