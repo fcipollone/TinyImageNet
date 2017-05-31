@@ -307,7 +307,6 @@ def scale_and_crop_single_img(img, H_target, W_target):
             out = img[y1:y1 + hh, x1:x1 + ww, :]
             
             out = imresize(out, (H_target, W_target, C), interp='cubic')
-            print(out.shape)
             return out
 
     out = imresize(img, (H_target, W_target, C), interp='cubic')
