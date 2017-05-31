@@ -45,7 +45,7 @@ class Model(object):
         self.is_training = tf.placeholder(tf.bool, name="is_training")
 
         # ==== assemble pieces ====
-        with tf.variable_scope("model", initializer=tf.uniform_unit_scaling_initializer(1.0)):
+        with tf.variable_scope("model", initializer=tf.contrib.layers.variance_scaling_initializer()):
             self.setup_system()
             self.setup_loss()
             self.setup_training_procedure()
@@ -283,7 +283,7 @@ class Model(object):
             sys.stdout.write('\n')
 
             # Evaluate accuracy
-            eval_size = min(len(val_data), len(train_data))
+            eval_size = min(len(val_data), len(train_data))//2
             train_acc = self.evaluate_model(session, train_data, eval_size)
             logging.info("Training Accuracy: %f \t\ton %d examples" % (train_acc, eval_size))
             val_acc = self.evaluate_model(session, val_data, eval_size)

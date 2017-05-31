@@ -31,9 +31,6 @@ tf.app.flags.DEFINE_string("classifier", "DemoClassifier", "The name of the clas
 tf.app.flags.DEFINE_string("data_dir", "data/tiny-imagenet-200", "tiny-imagenet directory (default ./data/tiny-imagenet-200)")
 tf.app.flags.DEFINE_string("train_dir", "", "Training directory to load the model parameters from (default: ./train/classifier).")
 tf.app.flags.DEFINE_string("log_dir", "log", "Path to store log and flag files (default: ./log)")
-tf.app.flags.DEFINE_string("run_name", "", "A name to give the run. For checkpoint saving. Defaults to classifier name.")
-tf.app.flags.DEFINE_bool("tb", False, "Log Tensorboard Graph")
-tf.app.flags.DEFINE_bool("background", False, "Prettier logging if running in background")
 tf.app.flags.DEFINE_bool("debug", False, "Run on a small set of data for debugging.")
 tf.app.flags.DEFINE_integer("n_classes", 200, "The number of classes. Don't change.")
 

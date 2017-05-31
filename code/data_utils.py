@@ -4,7 +4,7 @@ from builtins import range
 from six.moves import cPickle as pickle
 import numpy as np
 import os
-from scipy.misc import imread, imsave
+from scipy.misc import imread, imsave, imresize
 from scipy.ndimage import gaussian_filter, rotate
 import platform
 from tqdm import tqdm
@@ -275,24 +275,43 @@ def augment(dataset, fliplr = True, cropAndScale = True, doRotation = True, verb
 
 
 # Random crops and reflection
-def augment_batch(X_batch, H2, W2):
-    H1, W1, C1 = X_batch[0].shape
-    N = len(X_batch)
+def augment_batch(X_batch, H_target, W_target):
+    X_batch_scaled = []
+    for img in X_batch:
+        X_batch_scaled.append(scale_and_crop_single_img(img, H_target, W_target))
 
-    X_batch = np.stack(X_batch, axis=0)   # Make into one numpy array
-
+    X_batch = np.stack(X_batch_scaled, axis=0)   # Make into one numpy array
 
     if random.random() > 0.5:   # 50-50 chance the batch is flipped
         X_batch = np.fliplr(X_batch)
 
-    gapH = H1 - H2
-    gapW = W1 - W2
-
-    randH = random.randint(0, gapH)
-    randW = random.randint(0, gapW)
-
-    X_batch = X_batch[:, gapH:gapH + H2, gapW:gapW + W2, :] # Random crop
     return X_batch
+
+
+def scale_and_crop_single_img(img, H_target, W_target):
+    h, w, C = img.shape
+
+    area = h * w
+    for _ in range(10):
+        targetArea = random.uniform(0.08, 1.0) * area
+        aspectR = random.uniform(0.75, 1.333)
+
+        ww = int(np.sqrt(targetArea * aspectR))
+        hh = int(np.sqrt(targetArea / aspectR))
+        
+        if random.random() < 0.5:
+            ww, hh = hh, ww
+        if hh <= h and ww <= w:
+            x1 = 0 if w == ww else random.randint(0, w - ww)
+            y1 = 0 if h == hh else random.randint(0, h - hh)
+            out = img[y1:y1 + hh, x1:x1 + ww, :]
+            
+            out = imresize(out, (H_target, W_target, C), interp='cubic')
+            print(out.shape)
+            return out
+
+    out = imresize(img, (H_target, W_target, C), interp='cubic')
+    return outp
 
 
 # Get ten crops of the image
