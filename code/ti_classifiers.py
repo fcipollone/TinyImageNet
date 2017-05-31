@@ -208,7 +208,8 @@ class ResNet (ImageClassifier):
         return tf.contrib.layers.l2_regularizer(decay_rate)
 
     def weight_init(self):
-        return tf.contrib.layers.variance_scaling_initializer(mode='FAN_IN')
+        #return tf.contrib.layers.variance_scaling_initializer(mode='FAN_IN')
+        return tf.contrib.layers.xavier_initializer()
 
     def ResLayer(self, x, filters, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
