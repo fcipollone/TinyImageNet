@@ -203,7 +203,7 @@ class ResNet (ImageClassifier):
     def name(self):
         return "ResNet"
 
-        def weight_decay(self):
+    def weight_decay(self):
         decay_rate = 0.0001
         return tf.contrib.layers.l2_regularizer(decay_rate)
 
@@ -268,6 +268,8 @@ class ResNet (ImageClassifier):
     def loss(self, y):
         l = tf.nn.softmax_cross_entropy_with_logits(labels=tf.one_hot(y, self.FLAGS.n_classes), logits=self.raw_scores)
         loss = tf.reduce_mean(l)
+        reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
+
         return loss
 
 
