@@ -8,8 +8,10 @@ def get_classifier(name, FLAGS):
         return AlexNet(FLAGS)
     elif name == GoogleNet(FLAGS).name():
         return GoogleNet(FLAGS)
-    elif name == ResNet(FLAGS).name():
-        return ResNet(FLAGS)
+    elif name == ResNet32(FLAGS).name():
+        return ResNet32(FLAGS)
+    elif name == ResNet18(FLAGS).name():
+        return ResNet18(FLAGS)
     elif name == DeepResNet(FLAGS).name():
         return DeepResNet(FLAGS)
     else:
@@ -221,12 +223,12 @@ class GoogleNet (ImageClassifier):
 
 
 # A 34 Layer Resnet
-class ResNet (ImageClassifier):
+class ResNet34 (ImageClassifier):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)
 
     def name(self):
-        return "ResNet"
+        return "ResNet34"
 
     def ResLayer(self, x, filters, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
@@ -241,9 +243,10 @@ class ResNet (ImageClassifier):
             nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
 
             if stride != 1:
-                print("Padding identity mapping to correct size")
-                x = tf.nn.avg_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='VALID', data_format='NHWC')
-                x = tf.pad(x, [[0,0], [0,0], [0,0], [(filters-C)//2, (filters-C)//2]])    # This is kind of weird
+                print("Projecting identity mapping to correct size")
+                x = tf.nn.avg_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='SAME', data_format='NHWC')
+                x = layers.conv2d(x, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
+                    activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
             nn = x + nn     # Identity mapping plus residual connection
             nn = tf.nn.relu(nn)
@@ -275,6 +278,42 @@ class ResNet (ImageClassifier):
         nn = self.ResLayer(nn, 512, is_training = is_training, stride = 2, scope = "ResLayer14")
         nn = self.ResLayer(nn, 512, is_training = is_training, scope = "ResLayer15")
         nn = self.ResLayer(nn, 512, is_training = is_training, scope = "ResLayer16")
+
+        # Output Stem
+        _, H1, W1, _ = nn.shape
+        nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
+        nn = layers.flatten(nn)
+        self.raw_scores = layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, \
+            activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+
+        assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
+        return self.raw_scores
+
+
+# An 18 layer resnet
+class ResNet18(ResNet34):
+    def __init__(self, FLAGS):
+        super().__init__(FLAGS)
+    
+    def name(self):
+        return "ResNet18"
+
+    def forward_pass(self, X, is_training):
+        print("Input image: ", X.shape)
+        nn = layers.conv2d(X, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
+            activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+        nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+        nn = tf.nn.relu(nn)
+
+        # Residual Layers
+        nn = self.ResLayer(nn, 64, is_training = is_training, scope = "ResLayer1")
+        nn = self.ResLayer(nn, 64, is_training = is_training, scope = "ResLayer2")
+        nn = self.ResLayer(nn, 128, is_training = is_training, stride = 2, scope = "ResLayer4")
+        nn = self.ResLayer(nn, 128, is_training = is_training, scope = "ResLayer5")
+        nn = self.ResLayer(nn, 256, is_training = is_training, stride = 2, scope = "ResLayer8")
+        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer9")
+        nn = self.ResLayer(nn, 512, is_training = is_training, stride = 2, scope = "ResLayer14")
+        nn = self.ResLayer(nn, 512, is_training = is_training, scope = "ResLayer15")
 
         # Output Stem
         _, H1, W1, _ = nn.shape
