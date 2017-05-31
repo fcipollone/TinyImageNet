@@ -106,20 +106,20 @@ class AlexNet (ImageClassifier):
     def forward_pass(self, X, is_training):
         # Conv Layers
         print("Input Shape:", X.shape)
-        nn = tf.contrib.layers.conv2d(X, num_outputs=32, kernel_size=7, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.conv2d(nn, num_outputs=32, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
-        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
-        nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training)
-        print(nn.shape)
-
+        nn = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=7, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
         nn = tf.contrib.layers.conv2d(nn, num_outputs=64, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
         nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
         nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training)
         print(nn.shape)
+
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
+        nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training)
+        print(nn.shape)
         
-        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
         nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
         print(nn.shape)
         
@@ -231,8 +231,8 @@ class ResNet (ImageClassifier):
         return tf.contrib.layers.l2_regularizer(self.FLAGS.weight_decay)
 
     def weight_init(self):
-        #return tf.contrib.layers.variance_scaling_initializer()
-        return tf.contrib.layers.xavier_initializer()
+        return tf.contrib.layers.variance_scaling_initializer(mode='FAN_OUT')
+        #return tf.contrib.layers.xavier_initializer()
 
     def ResLayer(self, x, filters, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
