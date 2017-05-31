@@ -1,4 +1,5 @@
 import tensorflow as tf
+import tensorflow.contrib.layers as layers
 from tensorflow.python.ops import variable_scope as vs
 
 # Make it easy to switch classifiers using flags
@@ -61,6 +62,12 @@ class ImageClassifier(object):
         else:
             raise Exception("InvalidOptimizerError")
 
+    def weight_decay(self):
+        return layers.l2_regularizer(self.FLAGS.weight_decay)
+
+    def weight_init(self):
+        return layers.variance_scaling_initializer(mode='FAN_OUT')
+
 
     def train_op(self, lr, step, loss):
         """
@@ -100,36 +107,32 @@ class AlexNet (ImageClassifier):
     def name(self):
         return "AlexNet"
 
-    def weight_decay(self): # "Neccesary not only for regularization, but for lowering training error"
-        return tf.contrib.layers.l2_regularizer(self.FLAGS.weight_decay)
-
     def forward_pass(self, X, is_training):
         # Conv Layers
         print("Input Shape:", X.shape)
-        nn = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=7, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.conv2d(nn, num_outputs=64, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = layers.conv2d(X, num_outputs=64, kernel_size=7, stride=1, data_format='NHWC', padding='SAME', weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+        nn = layers.conv2d(nn, num_outputs=64, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
         nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
-        nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training)
+        nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training)
         print(nn.shape)
 
-        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = layers.conv2d(nn, num_outputs=128, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
         nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
-        nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training)
+        nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training)
         print(nn.shape)
         
-        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+        nn = layers.conv2d(nn, num_outputs=256, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
         nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
         print(nn.shape)
         
         # Affine Layers
-        nn = tf.contrib.layers.flatten(nn)
-        nn = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = 512, weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
-        nn = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = 512, weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
-        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, weights_regularizer = self.weight_decay())
+        nn = layers.flatten(nn)
+        nn = layers.fully_connected(inputs = nn, num_outputs = 1024, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+        nn = layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
+        nn = layers.fully_connected(inputs = nn, num_outputs = 1024, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+        nn = layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
+        self.raw_scores = layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
@@ -156,31 +159,31 @@ class GoogleNet (ImageClassifier):
         """
 
         with vs.variable_scope("inception" + str(i)):
-            conv3 = tf.contrib.layers.conv2d(X, num_outputs=a, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3")
-            conv1 = tf.contrib.layers.conv2d(X, num_outputs=b, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1")
-            conv2 = tf.contrib.layers.conv2d(X, num_outputs=d, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
+            conv3 = layers.conv2d(X, num_outputs=a, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3")
+            conv1 = layers.conv2d(X, num_outputs=b, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1")
+            conv2 = layers.conv2d(X, num_outputs=d, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
             mp1 = tf.nn.max_pool(X, [1,3,3,1], strides=[1,1,1,1], padding='SAME', data_format='NHWC', name="max_pool")
 
-            conv4 = tf.contrib.layers.conv2d(conv1, num_outputs=c, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv4")
-            conv5 = tf.contrib.layers.conv2d(conv2, num_outputs=e, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', scope = "Conv5")
-            conv6 = tf.contrib.layers.conv2d(mp1, num_outputs=f, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv6")
+            conv4 = layers.conv2d(conv1, num_outputs=c, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv4")
+            conv5 = layers.conv2d(conv2, num_outputs=e, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', scope = "Conv5")
+            conv6 = layers.conv2d(mp1, num_outputs=f, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv6")
             out = tf.concat([conv3, conv4, conv5, conv6], axis=3, name="Concat")
         return out
 
     def auxiliary_stem(self, X, i, is_training):
         with vs.variable_scope("gradient_helper_stem" + str(i)):
             ap1 = tf.nn.avg_pool(X, [1,5,5,1], strides=[1,3,3,1], padding='VALID', data_format='NHWC', name="avg_pool")
-            conv1 = tf.contrib.layers.conv2d(ap1, num_outputs=128, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "conv1")
-            fv1 = tf.contrib.layers.fully_connected(inputs = conv1, num_outputs = 1024, scope = "fc1")
-            drop1 = tf.contrib.layers.dropout(fv1, keep_prob = 0.7, is_training=is_training)
-            flat1 = tf.contrib.layers.flatten(drop1)
-            stem_out = tf.contrib.layers.fully_connected(inputs = flat1, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
+            conv1 = layers.conv2d(ap1, num_outputs=128, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "conv1")
+            fv1 = layers.fully_connected(inputs = conv1, num_outputs = 1024, scope = "fc1")
+            drop1 = layers.dropout(fv1, keep_prob = 0.7, is_training=is_training)
+            flat1 = layers.flatten(drop1)
+            stem_out = layers.fully_connected(inputs = flat1, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
         return stem_out
 
     def forward_pass(self, X, is_training):
         # Stem Network
-        conv1 = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=7, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1")
-        conv2 = tf.contrib.layers.conv2d(conv1, num_outputs=192, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
+        conv1 = layers.conv2d(X, num_outputs=64, kernel_size=7, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1")
+        conv2 = layers.conv2d(conv1, num_outputs=192, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
         mp1 = tf.nn.max_pool(conv2, [1,3,3,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool1")
 
         # Inception Layers. Params taken from GoogleNet Paper. But they shouldnt matter too much
@@ -199,9 +202,9 @@ class GoogleNet (ImageClassifier):
         # Classifier Output
         _, H1, W1, _ = incept9.shape
         ap1 = tf.nn.avg_pool(incept9, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
-        drop1 = tf.contrib.layers.dropout(ap1, keep_prob = 0.6, is_training=is_training)
-        flat1 = tf.contrib.layers.flatten(drop1)
-        self.raw_scores = tf.contrib.layers.fully_connected(inputs = flat1, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
+        drop1 = layers.dropout(ap1, keep_prob = 0.6, is_training=is_training)
+        flat1 = layers.flatten(drop1)
+        self.raw_scores = layers.fully_connected(inputs = flat1, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
 
         # Attach auxiliary output stems for helping grads propogate
         self.stem1_scores = self.auxiliary_stem(incept3, 1, is_training)
@@ -227,24 +230,17 @@ class ResNet (ImageClassifier):
     def name(self):
         return "ResNet"
 
-    def weight_decay(self):
-        return tf.contrib.layers.l2_regularizer(self.FLAGS.weight_decay)
-
-    def weight_init(self):
-        return tf.contrib.layers.variance_scaling_initializer(mode='FAN_OUT')
-        #return tf.contrib.layers.xavier_initializer()
-
     def ResLayer(self, x, filters, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
             C = x.get_shape().as_list()[3]
-            nn = tf.contrib.layers.conv2d(x, num_outputs=filters, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
+            nn = layers.conv2d(x, num_outputs=filters, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
                 activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-            nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
             nn = tf.nn.relu(nn)
 
-            nn = tf.contrib.layers.conv2d(nn, num_outputs=filters, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
+            nn = layers.conv2d(nn, num_outputs=filters, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
                 activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-            nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
 
             if stride != 1:
                 print("Padding identity mapping to correct size")
@@ -259,9 +255,9 @@ class ResNet (ImageClassifier):
 
     def forward_pass(self, X, is_training):
         print("Input image: ", X.shape)
-        nn = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
+        nn = layers.conv2d(X, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
             activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+        nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
         nn = tf.nn.relu(nn)
 
         # Residual Layers
@@ -285,8 +281,8 @@ class ResNet (ImageClassifier):
         # Output Stem
         _, H1, W1, _ = nn.shape
         nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
-        nn = tf.contrib.layers.flatten(nn)
-        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, \
+        nn = layers.flatten(nn)
+        self.raw_scores = layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, \
             activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
@@ -307,34 +303,28 @@ class DeepResNet (ImageClassifier):
     def name(self):
         return "DeepResNet"
 
-    def weight_decay(self):
-        return tf.contrib.layers.l2_regularizer(self.FLAGS.weight_decay)
-
-    def weight_init(self):
-        return tf.contrib.layers.variance_scaling_initializer(mode='FAN_IN')
-
     def BottleneckResLayer(self, x, filters1, filters2, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
             C = x.get_shape().as_list()[3]
-            nn = tf.contrib.layers.conv2d(x, num_outputs=filters1, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
+            nn = layers.conv2d(x, num_outputs=filters1, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
                 activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-            nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
             nn = tf.nn.relu(nn)
 
-            nn = tf.contrib.layers.conv2d(x, num_outputs=filters1, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
+            nn = layers.conv2d(x, num_outputs=filters1, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
                 activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-            nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
             nn = tf.nn.relu(nn)
 
-            nn = tf.contrib.layers.conv2d(nn, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
+            nn = layers.conv2d(nn, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
                 activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
-            nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
 
             if stride != 1 or filters2 != C:
                 print("Projecting identity mapping to correct size")
                 x = tf.nn.avg_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='SAME', data_format='NHWC')
-                x = tf.contrib.layers.conv2d(x, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
+                x = layers.conv2d(x, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
                     activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
             nn = x + nn     # Identity mapping plus residual connection
@@ -345,9 +335,9 @@ class DeepResNet (ImageClassifier):
 
     def forward_pass(self, X, is_training):
         print("Imput image: ", X.shape)
-        nn = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
+        nn = layers.conv2d(X, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
             activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-        nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+        nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
         nn = tf.nn.relu(nn)
 
         # Residual Layers
@@ -374,8 +364,8 @@ class DeepResNet (ImageClassifier):
         # Output Stem
         _, H1, W1, _ = nn.shape
         nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
-        nn = tf.contrib.layers.flatten(nn)
-        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, \
+        nn = layers.flatten(nn)
+        self.raw_scores = layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, \
             weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
