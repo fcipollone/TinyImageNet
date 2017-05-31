@@ -291,26 +291,20 @@ def augment_batch(X_batch, H_target, W_target):
 def scale_and_crop_single_img(img, H_target, W_target):
     h, w, C = img.shape
 
+    # Get random new size
     area = h * w
-    for _ in range(10):
-        targetArea = random.uniform(0.08, 1.0) * area
-        aspectR = random.uniform(0.75, 1.333)
-
-        ww = int(np.sqrt(targetArea * aspectR))
-        hh = int(np.sqrt(targetArea / aspectR))
+    targetArea = random.uniform(0.75, 1.0) * area
+    ww = int(np.sqrt(targetArea)
+    hh = int(np.sqrt(targetArea)
+    
+    # Crop and resize
+    x1 = 0 if w == ww else random.randint(0, w - ww)
+    y1 = 0 if h == hh else random.randint(0, h - hh)
+    out = img[y1:y1 + hh, x1:x1 + ww, :]
         
-        if random.random() < 0.5:
-            ww, hh = hh, ww
-        if hh <= h and ww <= w:
-            x1 = 0 if w == ww else random.randint(0, w - ww)
-            y1 = 0 if h == hh else random.randint(0, h - hh)
-            out = img[y1:y1 + hh, x1:x1 + ww, :]
-            
-            out = imresize(out, (H_target, W_target, C), interp='cubic')
-            return out
+    out = imresize(out, (H_target, W_target, C), interp='cubic')
+    return out
 
-    out = imresize(img, (H_target, W_target, C), interp='cubic')
-    return outp
 
 
 # Get ten crops of the image
