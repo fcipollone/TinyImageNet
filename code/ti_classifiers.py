@@ -207,16 +207,19 @@ class ResNet (ImageClassifier):
         decay_rate = 0.0001
         return tf.contrib.layers.l2_regularizer(decay_rate)
 
+    def weight_init(self):
+        return tf.contrib.layers.variance_scaling_initializer(mode='FAN_IN')
+
     def ResLayer(self, x, filters, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
             C = x.get_shape().as_list()[3]
             nn = tf.contrib.layers.conv2d(x, num_outputs=filters, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
-                activation_fn = None, weights_initializer = tf.contrib.layers.variance_scaling_initializer(), weights_regularizer = self.weight_decay())
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
             nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
             nn = tf.nn.relu(nn)
 
             nn = tf.contrib.layers.conv2d(nn, num_outputs=filters, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
-                activation_fn = None, weights_initializer = tf.contrib.layers.variance_scaling_initializer(), weights_regularizer = self.weight_decay())
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
             nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
 
             if stride != 1:
@@ -233,7 +236,7 @@ class ResNet (ImageClassifier):
     def forward_pass(self, X, is_training):
         print("Input image: ", X.shape)
         nn = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
-            activation_fn = None, weights_initializer = tf.contrib.layers.variance_scaling_initializer(), weights_regularizer = self.weight_decay())
+            activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
         nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
         nn = tf.nn.relu(nn)
 
@@ -260,7 +263,7 @@ class ResNet (ImageClassifier):
         nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
         nn = tf.contrib.layers.flatten(nn)
         self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, \
-            activation_fn = None, weights_initializer = tf.contrib.layers.variance_scaling_initializer(), weights_regularizer = self.weight_decay())
+            activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
@@ -269,8 +272,7 @@ class ResNet (ImageClassifier):
         l = tf.nn.softmax_cross_entropy_with_logits(labels=tf.one_hot(y, self.FLAGS.n_classes), logits=self.raw_scores)
         loss = tf.reduce_mean(l)
         reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
-
-        return loss
+        return loss + reg_loss
 
 
 # A 50 Layer Resnet
@@ -285,21 +287,24 @@ class DeepResNet (ImageClassifier):
         decay_rate = 0.0001
         return tf.contrib.layers.l2_regularizer(decay_rate)
 
+    def weight_init(self):
+        return tf.contrib.layers.variance_scaling_initializer(mode='FAN_IN')
+
     def BottleneckResLayer(self, x, filters1, filters2, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
             C = x.get_shape().as_list()[3]
             nn = tf.contrib.layers.conv2d(x, num_outputs=filters1, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
-                activation_fn = None, weights_initializer = tf.contrib.layers.variance_scaling_initializer(), weights_regularizer = self.weight_decay())
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
             nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
             nn = tf.nn.relu(nn)
 
             nn = tf.contrib.layers.conv2d(x, num_outputs=filters1, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
-                activation_fn = None, weights_initializer = tf.contrib.layers.variance_scaling_initializer(), weights_regularizer = self.weight_decay())
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
             nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
             nn = tf.nn.relu(nn)
 
             nn = tf.contrib.layers.conv2d(nn, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
-                activation_fn = None, weights_initializer = tf.contrib.layers.variance_scaling_initializer(), weights_regularizer = self.weight_decay())
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
             nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
 
@@ -307,7 +312,7 @@ class DeepResNet (ImageClassifier):
                 print("Projecting identity mapping to correct size")
                 x = tf.nn.avg_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='SAME', data_format='NHWC')
                 x = tf.contrib.layers.conv2d(x, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
-                    activation_fn = None, weights_initializer = tf.contrib.layers.variance_scaling_initializer(), weights_regularizer = self.weight_decay())
+                    activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
             nn = x + nn     # Identity mapping plus residual connection
             nn = tf.nn.relu(nn)
@@ -318,7 +323,7 @@ class DeepResNet (ImageClassifier):
     def forward_pass(self, X, is_training):
         print("Imput image: ", X.shape)
         nn = tf.contrib.layers.conv2d(X, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
-            activation_fn = None, weights_initializer = tf.contrib.layers.variance_scaling_initializer(), weights_regularizer = self.weight_decay())
+            activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
         nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
         nn = tf.nn.relu(nn)
 
@@ -347,7 +352,8 @@ class DeepResNet (ImageClassifier):
         _, H1, W1, _ = nn.shape
         nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
         nn = tf.contrib.layers.flatten(nn)
-        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out", weights_regularizer = self.weight_decay())
+        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None,v\
+            weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
