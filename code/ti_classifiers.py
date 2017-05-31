@@ -47,10 +47,12 @@ class ImageClassifier(object):
         - Returns:
         loss: a double
         """
-
         l = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
         loss = tf.reduce_mean(l)
-        return loss
+        regs = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        print("Regs: ", regs)
+        reg_loss = tf.reduce_sum(regs)
+        return loss + reg_loss
 
     def get_optimizer(self, lr):
         if self.FLAGS.optimizer == "adam":
@@ -138,12 +140,6 @@ class AlexNet (ImageClassifier):
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
-
-    def loss(self, y):
-        l = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
-        loss = tf.reduce_mean(l)
-        reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
-        return loss + reg_loss
 
 
 # A net using google inception modules
@@ -290,12 +286,6 @@ class ResNet (ImageClassifier):
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
 
-    def loss(self, y):
-        l = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
-        loss = tf.reduce_mean(l)
-        reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
-        return loss + reg_loss
-
 
 # A 50 Layer Resnet
 class DeepResNet (ImageClassifier):
@@ -373,9 +363,5 @@ class DeepResNet (ImageClassifier):
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
 
-    def loss(self, y):
-        l = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
-        loss = tf.reduce_mean(l)
-        reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
-        return loss + reg_loss
+
 
