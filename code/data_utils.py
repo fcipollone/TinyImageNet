@@ -292,17 +292,20 @@ def scale_and_crop_single_img(img, H_target, W_target):
     h, w, C = img.shape
 
     # Get random new size
-    area = h * w
-    targetArea = random.uniform(0.75, 1.0) * area
-    ww = int(np.sqrt(targetArea))
-    hh = int(np.sqrt(targetArea))
+    #area = h * w
+    #targetArea = random.uniform(0.75, 1.0) * area
+    #ww = int(np.sqrt(targetArea))
+    #hh = int(np.sqrt(targetArea))
+
+    ww = H_target
+    hh = W_target
     
     # Crop and resize
     x1 = 0 if w == ww else random.randint(0, w - ww)
     y1 = 0 if h == hh else random.randint(0, h - hh)
     out = img[y1:y1 + hh, x1:x1 + ww, :]
         
-    out = imresize(out, (H_target, W_target, C), interp='cubic')
+    #out = imresize(out, (H_target, W_target, C), interp='cubic')
     return out
 
 
