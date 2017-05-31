@@ -244,8 +244,8 @@ class ResNet34 (ImageClassifier):
 
             if stride != 1:
                 print("Projecting identity mapping to correct size")
-                x = tf.nn.avg_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='SAME', data_format='NHWC')
-                x = layers.conv2d(x, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
+                x = tf.nn.max_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='SAME', data_format='NHWC') #previously used avg_pool
+                x = layers.conv2d(x, num_outputs=filters, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
                     activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
             nn = x + nn     # Identity mapping plus residual connection
