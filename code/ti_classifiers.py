@@ -66,7 +66,7 @@ class ImageClassifier(object):
         return layers.l2_regularizer(self.FLAGS.weight_decay)
 
     def weight_init(self):
-        return layers.variance_scaling_initializer(mode='FAN_OUT')
+        return layers.variance_scaling_initializer(mode='FAN_IN')
 
 
     def train_op(self, lr, step, loss):
