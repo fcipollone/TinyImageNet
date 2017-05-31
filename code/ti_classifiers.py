@@ -131,9 +131,9 @@ class AlexNet (ImageClassifier):
         # Affine Layers
         nn = layers.flatten(nn)
         nn = layers.fully_connected(inputs = nn, num_outputs = 1024, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-        nn = layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
+        #nn = layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
         nn = layers.fully_connected(inputs = nn, num_outputs = 1024, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-        nn = layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
+        #nn = layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
         self.raw_scores = layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
