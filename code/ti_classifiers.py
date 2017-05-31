@@ -8,8 +8,8 @@ def get_classifier(name, FLAGS):
         return AlexNet(FLAGS)
     elif name == GoogleNet(FLAGS).name():
         return GoogleNet(FLAGS)
-    elif name == ResNet32(FLAGS).name():
-        return ResNet32(FLAGS)
+    elif name == ResNet34(FLAGS).name():
+        return ResNet34(FLAGS)
     elif name == ResNet18(FLAGS).name():
         return ResNet18(FLAGS)
     elif name == DeepResNet(FLAGS).name():
