@@ -47,9 +47,20 @@ class ImageClassifier(object):
         loss: a double
         """
 
-        l = tf.nn.softmax_cross_entropy_with_logits(labels=tf.one_hot(y, self.FLAGS.n_classes), logits=self.raw_scores)
+        l = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
         loss = tf.reduce_mean(l)
         return loss
+
+    def get_optimizer(self, lr):
+        if self.FLAGS.optimizer == "adam":
+            return tf.train.AdamOptimizer(lr)   # Recommended lr of 1e-3
+        elif self.FLAGS.optimizer == 'nesterov':   
+            return tf.train.MomentumOptimizer(lr, momentum = 0.9, use_nesterov = True)   # Recommended lr of 0.1, this is what was used in the resnet paper
+        elif self.FLAGS.optimizer == 'rmsprop':
+            return tf.train.RMSPropOptimizer(lr)    # Recommended lr of 1e-2
+        else:
+            raise Exception("InvalidOptimizerError")
+
 
     def train_op(self, lr, step, loss):
         """
@@ -64,8 +75,7 @@ class ImageClassifier(object):
         global_norm: the current global_norm
         """
 
-        opt_function = tf.train.AdamOptimizer
-        optimizer = opt_function(lr)
+        optimizer = self.get_optimizer(lr)
 
         grads_and_vars = optimizer.compute_gradients(loss, tf.trainable_variables())
         grads = [g for g, v in grads_and_vars]
@@ -82,7 +92,7 @@ class ImageClassifier(object):
 
 ################################################################################################################################
 
-# AlexNet, but scaled down in some ways for tiny-imagenet
+# AlexNet, but with reduced capacity
 class AlexNet (ImageClassifier):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)
@@ -90,30 +100,45 @@ class AlexNet (ImageClassifier):
     def name(self):
         return "AlexNet"
 
+    def weight_decay(self): # "Neccesary not only for regularization, but for lowering training error"
+        return tf.contrib.layers.l2_regularizer(self.FLAGS.weight_decay)
+
     def forward_pass(self, X, is_training):
         # Conv Layers
-        conv1 = tf.contrib.layers.conv2d(X, num_outputs=48, kernel_size=7, stride=2, data_format='NHWC', padding='SAME', scope = "Conv1")
-        conv1b = tf.contrib.layers.conv2d(conv1, num_outputs=48, kernel_size=5, stride=1, data_format='NHWC', padding='VALID', scope = "Conv1b")
-        mp1 = tf.nn.max_pool(conv1b, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool1")
-        bn1 = tf.contrib.layers.batch_norm(mp1, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1")
+        print("Input Shape:", X.shape)
+        nn = tf.contrib.layers.conv2d(X, num_outputs=32, kernel_size=7, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=32, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
+        nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training)
+        print(nn.shape)
 
-        conv2 = tf.contrib.layers.conv2d(bn1, num_outputs=128, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
-        mp2 = tf.nn.max_pool(conv2, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool2")
-        bn2 = tf.contrib.layers.batch_norm(mp2, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2")
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=64, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
+        nn = tf.contrib.layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training)
+        print(nn.shape)
         
-        conv3 = tf.contrib.layers.conv2d(bn2, num_outputs=192, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv3")
-        conv4 = tf.contrib.layers.conv2d(conv3, num_outputs=192, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv4")
-        conv5 = tf.contrib.layers.conv2d(conv4, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv5")
-        mp3 = tf.nn.max_pool(conv5, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool4")
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.contrib.layers.conv2d(nn, num_outputs=128, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', weights_regularizer = self.weight_decay())
+        nn = tf.nn.max_pool(nn, [1,2,2,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
+        print(nn.shape)
         
         # Affine Layers
-        h1_flat = tf.contrib.layers.flatten(mp3)
-        fc1 = tf.contrib.layers.fully_connected(inputs = h1_flat, num_outputs = 2048, scope = "fc1")
-        fc2 = tf.contrib.layers.fully_connected(inputs = fc1, num_outputs = 2048, scope = "fc2")
-        self.raw_scores = tf.contrib.layers.fully_connected(inputs = fc2, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
+        nn = tf.contrib.layers.flatten(nn)
+        nn = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = 512, weights_regularizer = self.weight_decay())
+        nn = tf.contrib.layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
+        nn = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = 512, weights_regularizer = self.weight_decay())
+        nn = tf.contrib.layers.dropout(nn, keep_prob = 0.5, is_training=is_training)
+        self.raw_scores = tf.contrib.layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, weights_regularizer = self.weight_decay())
 
         assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
         return self.raw_scores
+
+    def loss(self, y):
+        l = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
+        loss = tf.reduce_mean(l)
+        reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
+        return loss + reg_loss
 
 
 # A net using google inception modules
@@ -187,10 +212,9 @@ class GoogleNet (ImageClassifier):
 
 
     def loss(self, y):
-        one_hot_labels = tf.one_hot(y, self.FLAGS.n_classes)
-        l1 = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_labels, logits=self.raw_scores)
-        l2 = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_labels, logits=self.stem1_scores)
-        l3 = tf.nn.softmax_cross_entropy_with_logits(labels=one_hot_labels, logits=self.stem2_scores)
+        l1 = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
+        l2 = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.stem1_scores)
+        l3 = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.stem2_scores)
         loss = tf.reduce_mean(l1) + 0.3*tf.reduce_mean(l2) + 0.3*tf.reduce_mean(l3)
         return loss
 
@@ -204,11 +228,10 @@ class ResNet (ImageClassifier):
         return "ResNet"
 
     def weight_decay(self):
-        decay_rate = 0.0001
-        return tf.contrib.layers.l2_regularizer(decay_rate)
+        return tf.contrib.layers.l2_regularizer(self.FLAGS.weight_decay)
 
     def weight_init(self):
-        #return tf.contrib.layers.variance_scaling_initializer(mode='FAN_IN')
+        #return tf.contrib.layers.variance_scaling_initializer()
         return tf.contrib.layers.xavier_initializer()
 
     def ResLayer(self, x, filters, stride = 1, is_training = True, scope = "ResLayer"):
@@ -270,7 +293,7 @@ class ResNet (ImageClassifier):
         return self.raw_scores
 
     def loss(self, y):
-        l = tf.nn.softmax_cross_entropy_with_logits(labels=tf.one_hot(y, self.FLAGS.n_classes), logits=self.raw_scores)
+        l = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
         loss = tf.reduce_mean(l)
         reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
         return loss + reg_loss
@@ -285,8 +308,7 @@ class DeepResNet (ImageClassifier):
         return "DeepResNet"
 
     def weight_decay(self):
-        decay_rate = 0.0001
-        return tf.contrib.layers.l2_regularizer(decay_rate)
+        return tf.contrib.layers.l2_regularizer(self.FLAGS.weight_decay)
 
     def weight_init(self):
         return tf.contrib.layers.variance_scaling_initializer(mode='FAN_IN')
@@ -360,8 +382,8 @@ class DeepResNet (ImageClassifier):
         return self.raw_scores
 
     def loss(self, y):
-        l = tf.nn.softmax_cross_entropy_with_logits(labels=tf.one_hot(y, self.FLAGS.n_classes), logits=self.raw_scores)
+        l = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
         loss = tf.reduce_mean(l)
-        #l2_reg = tf.contrib.layers.apply_regularization(tf.contrib.layers.l2_regularizer(0.0001))
-        return loss #+ l2_reg
+        reg_loss = tf.reduce_sum(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
+        return loss + reg_loss
 

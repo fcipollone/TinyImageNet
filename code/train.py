@@ -14,12 +14,14 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 # Hyperparameters
-tf.app.flags.DEFINE_float("learning_rate", 1e-3, "Learning rate.") # For CS224, we used 0.001
+tf.app.flags.DEFINE_float("learning_rate", 1e-3, "Learning rate.")
 tf.app.flags.DEFINE_float("max_gradient_norm", 10.0, "Clip gradients to this norm.")
-tf.app.flags.DEFINE_integer("batch_size", 256, "Batch size to use during training.")    # Typically larger for cnns than rnns
+tf.app.flags.DEFINE_integer("batch_size", 256, "Batch size to use during training.")
+tf.app.flags.DEFINE_string("optimizer", "adam", "The name of the classifier to use. For easily switching between classifiers.")
+tf.app.flags.DEFINE_float("weight_decay", 0.0001, "Weight decay coefficient, some models may not use this")
 
 # Training Settings
-tf.app.flags.DEFINE_integer("epochs", 60, "Number of epochs to train.")
+tf.app.flags.DEFINE_integer("epochs", 100, "Number of epochs to train.")
 
 # Convenience
 tf.app.flags.DEFINE_string("classifier", "DemoClassifier", "The name of the classifier to use. For easily switching between classifiers.")

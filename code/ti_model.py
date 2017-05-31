@@ -45,7 +45,7 @@ class Model(object):
         self.is_training = tf.placeholder(tf.bool, name="is_training")
 
         # ==== assemble pieces ====
-        with tf.variable_scope("model", initializer=tf.contrib.layers.variance_scaling_initializer()):
+        with tf.variable_scope("model"):
             self.setup_system()
             self.setup_loss()
             self.setup_training_procedure()
@@ -247,8 +247,8 @@ class Model(object):
         val_data = list(zip(dataset["X_val"], dataset["y_val"]))
 
         # Systematic learning rate decay
-        decay_every = 5
-        decay_ratio = 1/float(2)
+        decay_every = 10
+        decay_ratio = 1/float(10)
 
         # Helper stuff
         num_data = len(train_data)

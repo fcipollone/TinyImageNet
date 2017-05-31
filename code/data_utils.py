@@ -322,8 +322,8 @@ def crop_10(image, H2, W2):
 
     gapH = H1 - H2
     gapW = W1 - W2
-    halfGapH = gapH / 2
-    halfGapW = gapW / 2
+    halfGapH = gapH // 2
+    halfGapW = gapW // 2
 
     ul = image[:, :H2, :W2, :]   # Upper Left
     br = image[:, gapH:, gapW:, :]   # Bottom Right
