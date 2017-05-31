@@ -114,7 +114,10 @@ class Model(object):
         '''
         assert(image.shape[0] == 1)
 
-        crops = crop_10(image, self.FLAGS.img_H, self.FLAGS.img_W)
+        if(self.FLAGS.augment):
+            crops = crop_10(image, self.FLAGS.img_H, self.FLAGS.img_W)
+        else:
+            crops = image
 
         scores = self.score(session, crops)
         overall_score = np.mean(scores, axis=0)
