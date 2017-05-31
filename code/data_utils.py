@@ -293,7 +293,7 @@ def scale_and_crop_single_img(img, H_target, W_target):
 
     # Get random new size
     area = h * w
-    targetArea = random.uniform(0.9, 1.0) * area
+    targetArea = random.uniform(0.75, 1.0) * area
     ww = int(np.sqrt(targetArea))
     hh = int(np.sqrt(targetArea))
     

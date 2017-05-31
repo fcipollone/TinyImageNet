@@ -50,8 +50,8 @@ class ImageClassifier(object):
         l = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=y, logits=self.raw_scores)
         loss = tf.reduce_mean(l)
         regs = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
-        print("Regs: ", regs)
-        reg_loss = tf.reduce_sum(regs)
+        print("Number of regularizers: ", len(regs))
+        reg_loss = self.FLAGS.weight_decay * tf.reduce_sum(regs)
         return loss + reg_loss
 
     def get_optimizer(self, lr):
@@ -65,7 +65,7 @@ class ImageClassifier(object):
             raise Exception("InvalidOptimizerError")
 
     def weight_decay(self):
-        return layers.l2_regularizer(self.FLAGS.weight_decay)
+        return layers.l2_regularizer(1.0)
 
     def weight_init(self):
         return layers.xavier_initializer()
