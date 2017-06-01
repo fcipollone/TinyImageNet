@@ -176,7 +176,7 @@ class GoogleNet (ImageClassifier):
         with vs.variable_scope("gradient_helper_stem" + str(i)):
             ap1 = tf.nn.avg_pool(X, [1,5,5,1], strides=[1,3,3,1], padding='SAME', data_format='NHWC', name="avg_pool")
             conv1 = layers.conv2d(ap1, num_outputs=128, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "conv1")
-            fv1 = layers.fully_connected(inputs = conv1, num_outputs = 1024, scope = "fc1")
+            fv1 = layers.fully_connected(inputs = conv1, num_outputs = 512, scope = "fc1")
             drop1 = layers.dropout(fv1, keep_prob = 0.7, is_training=is_training)
             flat1 = layers.flatten(drop1)
             stem_out = layers.fully_connected(inputs = flat1, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
@@ -193,14 +193,14 @@ class GoogleNet (ImageClassifier):
         nn = self.inception_module(nn, 3, 96, 48, 104, 8, 24, 32)
         incept3 = nn
         nn = self.inception_module(nn, 4, 80, 56, 112, 12, 32, 32)
-        nn = self.inception_module(nn, 5, 64, 64, 128, 12, 32, 32)
+        nn = self.inception_module(nn, 5, 64, 64, 64, 12, 32, 32)
         nn = tf.nn.max_pool(nn, [1,3,3,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
-        nn = self.inception_module(nn, 6, 55, 72, 144, 16, 32, 32)
+        nn = self.inception_module(nn, 6, 55, 72, 72, 16, 32, 32)
         incept6 = nn
-        nn = self.inception_module(nn, 7, 128, 80, 80, 8, 64, 64)
+        nn = self.inception_module(nn, 7, 64, 80, 80, 8, 64, 64)
         nn = tf.nn.max_pool(nn, [1,3,3,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
-        nn = self.inception_module(nn, 8, 128, 80, 160, 16, 64, 64)
-        nn = self.inception_module(nn, 9, 192, 96, 192, 24, 64, 64)
+        nn = self.inception_module(nn, 8, 64, 80, 80, 16, 64, 64)
+        nn = self.inception_module(nn, 9, 96, 96, 96, 24, 64, 64)
 
         # Classifier Output
         _, H1, W1, _ = nn.shape
