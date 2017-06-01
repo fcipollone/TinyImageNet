@@ -102,7 +102,7 @@ class Model(object):
         return np.array(outputs)
 
 
-    def crop_classify(self, session, image):
+    def crop_classify(self, session, image, top5 = False):
         '''
         NOT FOR TRAINING
 
@@ -121,8 +121,13 @@ class Model(object):
 
         scores = self.score(session, crops)
         overall_score = np.mean(scores, axis=0)
-        pred = np.argmax(overall_score)
-        return pred
+
+        if not top5:
+            pred = np.argmax(overall_score)
+            return pred
+        else:
+            top5pred = np.argpartition(a, -5)[-5:]
+            return top5pred
 
 
     def classify(self, session, X_batch):
@@ -137,7 +142,7 @@ class Model(object):
         return preds
 
 
-    def evaluate_model(self, session, dataset, sample_size=None):
+    def evaluate_model(self, session, dataset, sample_size=None, top5 = False):
         """
         :param session: session should always be centrally managed in train.py
         :param dataset: a representation of our data, in some implementations, you can
@@ -154,7 +159,7 @@ class Model(object):
         running_sum = 0
         for img, label in eval_set:
             img = np.expand_dims(img, axis=0)
-            pred = self.crop_classify(session, img)
+            pred = self.crop_classify(session, img, top5)
             correct_pred = np.equal(pred, label)
             running_sum += np.sum(correct_pred)
 

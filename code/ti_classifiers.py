@@ -168,11 +168,13 @@ class GoogleNet (ImageClassifier):
             conv5 = layers.conv2d(conv2, num_outputs=e, kernel_size=5, stride=1, data_format='NHWC', padding='SAME', scope = "Conv5")
             conv6 = layers.conv2d(mp1, num_outputs=f, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "Conv6")
             out = tf.concat([conv3, conv4, conv5, conv6], axis=3, name="Concat")
+            print(out.shape)
         return out
 
     def auxiliary_stem(self, X, i, is_training):
+        print("stem: ", X.shape)
         with vs.variable_scope("gradient_helper_stem" + str(i)):
-            ap1 = tf.nn.avg_pool(X, [1,5,5,1], strides=[1,3,3,1], padding='VALID', data_format='NHWC', name="avg_pool")
+            ap1 = tf.nn.avg_pool(X, [1,5,5,1], strides=[1,3,3,1], padding='SAME', data_format='NHWC', name="avg_pool")
             conv1 = layers.conv2d(ap1, num_outputs=128, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "conv1")
             fv1 = layers.fully_connected(inputs = conv1, num_outputs = 1024, scope = "fc1")
             drop1 = layers.dropout(fv1, keep_prob = 0.7, is_training=is_training)
@@ -182,29 +184,32 @@ class GoogleNet (ImageClassifier):
 
     def forward_pass(self, X, is_training):
         # Stem Network
-        conv1 = layers.conv2d(X, num_outputs=64, kernel_size=7, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1")
-        conv2 = layers.conv2d(conv1, num_outputs=192, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', scope = "Conv2")
-        mp1 = tf.nn.max_pool(conv2, [1,3,3,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool1")
+        nn = layers.conv2d(X, num_outputs=64, kernel_size=7, stride=1, data_format='NHWC', padding='SAME', scope = "Conv1")
 
-        # Inception Layers. Params taken from GoogleNet Paper. But they shouldnt matter too much
-        incept1 = self.inception_module(mp1, 1, 64, 96, 128, 16, 32, 32)
-        incept2 = self.inception_module(incept1, 2, 128, 128, 192, 32, 96, 64)
-        mp2 = tf.nn.max_pool(incept2, [1,3,3,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool")
-        incept3 = self.inception_module(mp2, 3, 192, 96, 208, 16, 48, 64)
-        incept4 = self.inception_module(incept3, 4, 160, 112, 224, 24, 64, 64)
-        incept5 = self.inception_module(incept4, 5, 128, 128, 256, 24, 64, 64)
-        incept6 = self.inception_module(incept5, 6, 112, 144, 288, 32, 64, 64)
-        incept7 = self.inception_module(incept6, 7, 256, 160, 320, 32, 128, 128)
-        mp3 = tf.nn.max_pool(incept7, [1,3,3,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC', name="max_pool")
-        incept8 = self.inception_module(mp3, 8, 256, 160, 320, 32, 128, 128)
-        incept9 = self.inception_module(incept8, 9, 384, 192, 384, 48, 128, 128)
+        # Inception Layers. Params taken from GoogleNet Paper, cut in half
+        nn = self.inception_module(nn, 1, 32, 48, 64, 8, 16, 16)
+        nn = self.inception_module(nn, 2, 64, 64, 96, 16, 48, 32)
+        nn = tf.nn.max_pool(nn, [1,3,3,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
+        nn = self.inception_module(nn, 3, 96, 48, 104, 8, 24, 32)
+        incept3 = nn
+        nn = self.inception_module(nn, 4, 80, 56, 112, 12, 32, 32)
+        nn = self.inception_module(nn, 5, 64, 64, 128, 12, 32, 32)
+        nn = tf.nn.max_pool(nn, [1,3,3,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
+        nn = self.inception_module(nn, 6, 55, 72, 144, 16, 32, 32)
+        incept6 = nn
+        nn = self.inception_module(nn, 7, 128, 80, 80, 8, 64, 64)
+        nn = tf.nn.max_pool(nn, [1,3,3,1], strides=[1,2,2,1], padding='SAME', data_format='NHWC')
+        nn = self.inception_module(nn, 8, 128, 80, 160, 16, 64, 64)
+        nn = self.inception_module(nn, 9, 192, 96, 192, 24, 64, 64)
 
         # Classifier Output
-        _, H1, W1, _ = incept9.shape
-        ap1 = tf.nn.avg_pool(incept9, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
-        drop1 = layers.dropout(ap1, keep_prob = 0.6, is_training=is_training)
-        flat1 = layers.flatten(drop1)
-        self.raw_scores = layers.fully_connected(inputs = flat1, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
+        _, H1, W1, _ = nn.shape
+        print("Before avg  pool: ", nn.shape)
+        nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
+        print("After avg pool: ", nn.shape)
+        nn = layers.dropout(nn, keep_prob = 0.6, is_training=is_training)
+        nn = layers.flatten(nn)
+        self.raw_scores = layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
 
         # Attach auxiliary output stems for helping grads propogate
         self.stem1_scores = self.auxiliary_stem(incept3, 1, is_training)
