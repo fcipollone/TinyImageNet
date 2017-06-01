@@ -108,10 +108,10 @@ def main(_):
         eval_size = len(val_data)
 
         top1acc = model.evaluate_model(sess, val_data, eval_size, top5 = False)
-        print("Top-1 Validation Accuracy: %f \ton %d examples" % (val_acc, eval_size))
+        print("Top-1 Validation Accuracy: %f \ton %d examples" % (top1acc, eval_size))
 
         top5acc = model.evaluate_model(sess, val_data, eval_size, top5 = True)
-        print("Top-5 Validation Accuracy: %f \ton %d examples" % (val_acc, eval_size))
+        print("Top-5 Validation Accuracy: %f \ton %d examples" % (top5acc, eval_size))
 
 
 
