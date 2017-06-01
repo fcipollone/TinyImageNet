@@ -34,6 +34,7 @@ tf.app.flags.DEFINE_string("data_dir", "data/tiny-imagenet-200", "tiny-imagenet 
 tf.app.flags.DEFINE_string("train_dir", "", "Training directory to load the model parameters from (default: ./train/classifier).")
 tf.app.flags.DEFINE_string("log_dir", "log", "Path to store log and flag files (default: ./log)")
 tf.app.flags.DEFINE_bool("debug", False, "Run on a small set of data for debugging.")
+tf.app.flags.DEFINE_bool("augment", True, "Whether or not to expand dataset using data augmentation")
 tf.app.flags.DEFINE_integer("n_classes", 200, "The number of classes. Don't change.")
 
 FLAGS = tf.app.flags.FLAGS
