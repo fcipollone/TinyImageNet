@@ -174,13 +174,14 @@ class GoogleNet (ImageClassifier):
     def auxiliary_stem(self, X, i, is_training):
         print("stem: ", X.shape)
         with vs.variable_scope("gradient_helper_stem" + str(i)):
-            ap1 = tf.nn.avg_pool(X, [1,5,5,1], strides=[1,3,3,1], padding='SAME', data_format='NHWC', name="avg_pool")
-            conv1 = layers.conv2d(ap1, num_outputs=128, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "conv1")
-            fv1 = layers.fully_connected(inputs = conv1, num_outputs = 512, scope = "fc1")
-            drop1 = layers.dropout(fv1, keep_prob = 0.7, is_training=is_training)
-            flat1 = layers.flatten(drop1)
-            stem_out = layers.fully_connected(inputs = flat1, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
-        return stem_out
+            nn = tf.nn.avg_pool(X, [1,5,5,1], strides=[1,3,3,1], padding='SAME', data_format='NHWC', name="avg_pool")
+            nn = layers.conv2d(nn, num_outputs=128, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', scope = "conv1")
+            _, H1, W1, _ = nn.shape
+            nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")
+            nn = layers.dropout(nn, keep_prob = 0.7, is_training=is_training)
+            nn = layers.flatten(nn)
+            nn = layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, activation_fn = None, scope = "fc_out")
+        return nn
 
     def forward_pass(self, X, is_training):
         # Stem Network
