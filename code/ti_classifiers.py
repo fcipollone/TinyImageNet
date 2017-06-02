@@ -279,7 +279,6 @@ class ResNet26 (ImageClassifier):
         nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer13")
         nn = self.ResLayer(nn, 512, is_training = is_training, stride = 2, scope = "ResLayer14")
         nn = self.ResLayer(nn, 512, is_training = is_training, scope = "ResLayer15")
-        nn = self.ResLayer(nn, 512, is_training = is_training, scope = "ResLayer16")
 
         # Output Stem
         _, H1, W1, _ = nn.shape
