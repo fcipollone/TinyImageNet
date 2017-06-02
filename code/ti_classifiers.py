@@ -12,8 +12,8 @@ def get_classifier(name, FLAGS):
         return ResNet18(FLAGS)
     elif name == DeepResNet(FLAGS).name():
         return DeepResNet(FLAGS)
-    elif name == WideResNet22(FLAGS).name():
-        return WideResNet22(FLAGS)
+    elif name == WideResNet32(FLAGS).name():
+        return WideResNet32(FLAGS)
     else:
         raise Exception("InvalidClassifierError")
         
@@ -292,7 +292,7 @@ class ResNet (ImageClassifier):
             return nn
 
 
-    def WideResLayer(self, x, k, filters, stride, scope = "WideResLayer")
+    def WideResLayer(self, x, k, filters, stride, scope = "WideResLayer"):
         with vs.variable_scope(scope):
             C = x.get_shape().as_list()[3]
 
@@ -406,12 +406,12 @@ class DeepResNet (ResNet):
 
 # WideResNet. Ironically, since this architecture is inteded for CIFAR-100, it is actually less wide that the
     # ResNet18 architecutre above, which was intended for the Full ImangeNet Competition
-class WideResNet22(ResNet):
+class WideResNet32(ResNet):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)
     
     def name(self):
-        return "WideResNet22"
+        return "WideResNet32"
 
     def forward_pass(self, X, is_training):
         print("Input image: ", X.shape)
