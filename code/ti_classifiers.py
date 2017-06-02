@@ -8,8 +8,8 @@ def get_classifier(name, FLAGS):
         return AlexNet(FLAGS)
     elif name == GoogleNet(FLAGS).name():
         return GoogleNet(FLAGS)
-    elif name == ResNet34(FLAGS).name():
-        return ResNet34(FLAGS)
+    elif name == ResNet26(FLAGS).name():
+        return ResNet26(FLAGS)
     elif name == ResNet18(FLAGS).name():
         return ResNet18(FLAGS)
     elif name == DeepResNet(FLAGS).name():
@@ -229,12 +229,12 @@ class GoogleNet (ImageClassifier):
 
 
 # A 34 Layer Resnet
-class ResNet34 (ImageClassifier):
+class ResNet26 (ImageClassifier):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)
 
     def name(self):
-        return "ResNet34"
+        return "ResNet26"
 
     def ResLayer(self, x, filters, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
@@ -274,12 +274,8 @@ class ResNet34 (ImageClassifier):
         nn = self.ResLayer(nn, 128, is_training = is_training, stride = 2, scope = "ResLayer4")
         nn = self.ResLayer(nn, 128, is_training = is_training, scope = "ResLayer5")
         nn = self.ResLayer(nn, 128, is_training = is_training, scope = "ResLayer6")
-        nn = self.ResLayer(nn, 128, is_training = is_training, scope = "ResLayer7")
         nn = self.ResLayer(nn, 256, is_training = is_training, stride = 2, scope = "ResLayer8")
         nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer9")
-        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer10")
-        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer11")
-        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer12")
         nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer13")
         nn = self.ResLayer(nn, 512, is_training = is_training, stride = 2, scope = "ResLayer14")
         nn = self.ResLayer(nn, 512, is_training = is_training, scope = "ResLayer15")
@@ -297,7 +293,7 @@ class ResNet34 (ImageClassifier):
 
 
 # An 18 layer resnet
-class ResNet18(ResNet34):
+class ResNet18(ResNet26):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)
     
