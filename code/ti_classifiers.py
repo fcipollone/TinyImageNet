@@ -296,9 +296,9 @@ class ResNet (ImageClassifier):
         with vs.variable_scope(scope):
             C = x.get_shape().as_list()[3]
 
-            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+            nn = layers.batch_norm(x, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
             nn = tf.nn.relu(nn)
-            nn = layers.conv2d(x, num_outputs=k*filters, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
+            nn = layers.conv2d(nn, num_outputs=k*filters, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
                 activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
             
             #nn = layers.dropout(nn, keep_prob = 0.7, is_training=is_training)
