@@ -12,6 +12,8 @@ def get_classifier(name, FLAGS):
         return ResNet18(FLAGS)
     elif name == DeepResNet(FLAGS).name():
         return DeepResNet(FLAGS)
+    elif name == WideResNet22(FLAGS).name():
+        return WideResNet22(FLAGS)
     else:
         raise Exception("InvalidClassifierError")
         
