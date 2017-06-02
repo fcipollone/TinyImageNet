@@ -19,6 +19,7 @@ from tensorflow.python.ops.nn import sparse_softmax_cross_entropy_with_logits
 
 from utils import get_batches
 from data_utils import augment_batch, crop_10
+from lrmanager import lrManager
 
 logging.basicConfig(level=logging.INFO)
 
@@ -126,7 +127,7 @@ class Model(object):
             pred = np.argmax(overall_score)
             return pred
         else:
-            top5pred = np.argpartition(a, -5)[-5:]
+            top5pred = np.argpartition(overall_score, -5)[-5:]
             return top5pred
 
 
@@ -254,24 +255,26 @@ class Model(object):
         train_data = list(zip(dataset["X_train"], dataset["y_train"]))
         val_data = list(zip(dataset["X_val"], dataset["y_val"]))
 
-        # Systematic learning rate decay
-        decay_every = 10
-        decay_ratio = 1/float(10)
-
-        # Helper stuff
+         # Helper stuff
         num_data = len(train_data)
         best_val_acc = 0
         best_train_acc = 0
         rolling_ave_window = 10
         losses = [10]*rolling_ave_window
+
+        # Systematic learning rate decay
+        lrHelper = lrManager(self.FLAGS, num_data)
         
         # Epoch level loop
+        step = 1
         for cur_epoch in range(self.FLAGS.epochs):
             batches, num_batches = get_batches(train_data, self.FLAGS.batch_size)
-
+            
             # Training loop
             for _i, batch in enumerate(batches):
                 i = _i + 1  # For convienince
+
+                self.current_lr = lrHelper.get_lr(step)
 
                 #Optimatize using batch
                 loss, norm, step = self.optimize(session, batch)

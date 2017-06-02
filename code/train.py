@@ -20,8 +20,12 @@ tf.app.flags.DEFINE_integer("batch_size", 256, "Batch size to use during trainin
 tf.app.flags.DEFINE_string("optimizer", "adam", "The name of the classifier to use. For easily switching between classifiers.")
 tf.app.flags.DEFINE_float("weight_decay", 0.0001, "Weight decay coefficient, some models may not use this")
 
+# Cyclic learning rates
+tf.app.flags.DEFINE_bool("cyclic", False, "Use cyclic learning rates/take model snapshots")
+tf.app.flags.DEFINE_integer("M", 5, "Number of cycles/number of snapshot models to train.")
+
 # Training Settings
-tf.app.flags.DEFINE_integer("epochs", 100, "Number of epochs to train.")
+tf.app.flags.DEFINE_integer("epochs", 45, "Number of epochs to train.")
 
 # Convenience
 tf.app.flags.DEFINE_string("classifier", "DemoClassifier", "The name of the classifier to use. For easily switching between classifiers.")
