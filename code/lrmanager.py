@@ -8,7 +8,7 @@ class lrManager(object):
         # For cyclic lr
         self.T = self.FLAGS.epochs*(math.ceil(num_data/self.FLAGS.batch_size))
         if self.FLAGS.cyclic:
-            print("Num steps per cycle: " + str(self.T))
+            print("Num steps per cycle: " + str(math.ceil(self.T/self.FLAGS.M)))
 
         # For standard lr
         decay_every = 10

@@ -298,7 +298,7 @@ class Model(object):
                     if not os.path.exists(snapshot_path):
                         os.makedirs(snapshot_path)
                     save_path = saver.save(session, os.path.join(snapshot_path, "model.ckpt"))
-                    logging.info("\nSnapshot saved at:  %s \n" % (best_val_acc, save_path))
+                    logging.info("\nSnapshot saved at:  %s \n" % (save_path))
 
             sys.stdout.write('\n')
 
