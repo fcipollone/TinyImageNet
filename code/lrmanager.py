@@ -29,11 +29,13 @@ class lrManager(object):
         a = self.FLAGS.learning_rate
 
         lr = a/2*(math.cos(math.pi*((step-1) % math.ceil(T/M))/math.ceil(T/M))+1)
+        print(lr)
         return lr
 
     def get_standard_lr(self, step):
         num_decays = math.floor(step / self.D)
         lr = self.FLAGS.learning_rate * self.decay_ratio ** self.D
+        print(lr)
         return lr
 
     def save_snapshot(self, step):
