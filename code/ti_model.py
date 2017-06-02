@@ -122,7 +122,7 @@ class Model(object):
 
         scores = self.score(session, crops)
         overall_score = np.mean(scores, axis=0)
-        
+
         if raw_score:
             return overall_score
 
@@ -306,7 +306,7 @@ class Model(object):
             sys.stdout.write('\n')
 
             # Evaluate accuracy
-            eval_size = min(len(val_data), len(train_data))//2
+            eval_size = min(len(val_data), len(train_data))//10
             train_acc = self.evaluate_model(session, train_data, eval_size)
             logging.info("Training Accuracy: %f \t\ton %d examples" % (train_acc, eval_size))
             val_acc = self.evaluate_model(session, val_data, eval_size)
