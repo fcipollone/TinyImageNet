@@ -414,13 +414,14 @@ class WideResNet32(ResNet):
         return "WideResNet32"
 
     def forward_pass(self, X, is_training):
+        k = 4
+
         print("Input image: ", X.shape)
-        nn = layers.conv2d(X, num_outputs=16, kernel_size=3, stride=2, data_format='NHWC', padding='SAME', \
+        nn = layers.conv2d(X, num_outputs=k*16, kernel_size=3, stride=2, data_format='NHWC', padding='SAME', \
             activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
         # Residual Layers
         print("Pre WideResNet: ", nn.shape)
-        k = 4
         nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer1")
         nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer2")
         nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer3")
