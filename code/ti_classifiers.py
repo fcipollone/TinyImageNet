@@ -8,8 +8,6 @@ def get_classifier(name, FLAGS):
         return AlexNet(FLAGS)
     elif name == GoogleNet(FLAGS).name():
         return GoogleNet(FLAGS)
-    elif name == ResNet26(FLAGS).name():
-        return ResNet26(FLAGS)
     elif name == ResNet18(FLAGS).name():
         return ResNet18(FLAGS)
     elif name == DeepResNet(FLAGS).name():
@@ -229,12 +227,12 @@ class GoogleNet (ImageClassifier):
 
 
 # A 34 Layer Resnet
-class ResNet26 (ImageClassifier):
+class ResNet (ImageClassifier):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)
 
     def name(self):
-        return "ResNet26"
+        raise Exception("NotImplementedError")
 
     def ResLayer(self, x, filters, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
@@ -260,39 +258,69 @@ class ResNet26 (ImageClassifier):
             print("Image after " + scope + ":", nn.shape)
             return nn
 
-    def forward_pass(self, X, is_training):
-        print("Input image: ", X.shape)
-        nn = layers.conv2d(X, num_outputs=64, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
-            activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-        nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
-        nn = tf.nn.relu(nn)
+    
+    def BottleneckResLayer(self, x, filters1, filters2, stride = 1, is_training = True, scope = "BottleneckResLayer"):
+        with vs.variable_scope(scope):
+            C = x.get_shape().as_list()[3]
+            nn = layers.conv2d(x, num_outputs=filters1, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+            nn = tf.nn.relu(nn)
 
-        # Residual Layers
-        nn = self.ResLayer(nn, 64, is_training = is_training, scope = "ResLayer1")
-        nn = self.ResLayer(nn, 64, is_training = is_training, scope = "ResLayer2")
-        nn = self.ResLayer(nn, 64, is_training = is_training, scope = "ResLayer3")
-        nn = self.ResLayer(nn, 128, is_training = is_training, stride = 2, scope = "ResLayer4")
-        nn = self.ResLayer(nn, 128, is_training = is_training, scope = "ResLayer5")
-        nn = self.ResLayer(nn, 128, is_training = is_training, scope = "ResLayer6")
-        nn = self.ResLayer(nn, 256, is_training = is_training, stride = 2, scope = "ResLayer8")
-        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer9")
-        nn = self.ResLayer(nn, 256, is_training = is_training, scope = "ResLayer13")
-        nn = self.ResLayer(nn, 512, is_training = is_training, stride = 2, scope = "ResLayer14")
-        nn = self.ResLayer(nn, 512, is_training = is_training, scope = "ResLayer15")
+            nn = layers.conv2d(x, num_outputs=filters1, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+            nn = tf.nn.relu(nn)
 
-        # Output Stem
-        _, H1, W1, _ = nn.shape
-        nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
-        nn = layers.flatten(nn)
-        self.raw_scores = layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, \
-            activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+            nn = layers.conv2d(nn, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
-        assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
-        return self.raw_scores
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
+
+            if stride != 1 or filters2 != C:
+                print("Projecting identity mapping to correct size")
+                x = tf.nn.avg_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='SAME', data_format='NHWC')
+                x = layers.conv2d(x, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
+                    activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+
+            nn = x + nn     # Identity mapping plus residual connection
+            nn = tf.nn.relu(nn)
+
+            print("Image after " + scope + ":", nn.shape)
+            return nn
+
+
+    def WideResLayer(self, x, k, filters, stride, scope = "WideResLayer")
+        with vs.variable_scope(scope):
+            C = x.get_shape().as_list()[3]
+
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
+            nn = tf.nn.relu(nn)
+            nn = layers.conv2d(x, num_outputs=k*filters, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+            
+            #nn = layers.dropout(nn, keep_prob = 0.7, is_training=is_training)
+                        
+            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
+            nn = tf.nn.relu(nn)
+
+            nn = layers.conv2d(nn, num_outputs=k*filters, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
+                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+
+            if stride != 1:
+                print("Projecting identity mapping to correct size")
+                x = tf.nn.max_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='SAME', data_format='NHWC') #previously used avg_pool
+                x = layers.conv2d(x, num_outputs=k*filters, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
+                    activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+
+            nn = x + nn     # Identity mapping plus residual connection
+
+            print("Image after " + scope + ":", nn.shape)
+            return nn
 
 
 # An 18 layer resnet
-class ResNet18(ResNet26):
+class ResNet18(ResNet):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)
     
@@ -328,42 +356,12 @@ class ResNet18(ResNet26):
 
 
 # A 50 Layer Resnet
-class DeepResNet (ImageClassifier):
+class DeepResNet (ResNet):
     def __init__(self, FLAGS):
         super().__init__(FLAGS)
 
     def name(self):
         return "DeepResNet"
-
-    def BottleneckResLayer(self, x, filters1, filters2, stride = 1, is_training = True, scope = "ResLayer"):
-        with vs.variable_scope(scope):
-            C = x.get_shape().as_list()[3]
-            nn = layers.conv2d(x, num_outputs=filters1, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
-                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
-            nn = tf.nn.relu(nn)
-
-            nn = layers.conv2d(x, num_outputs=filters1, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
-                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn1", activation_fn = None)
-            nn = tf.nn.relu(nn)
-
-            nn = layers.conv2d(nn, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
-                activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-
-            nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
-
-            if stride != 1 or filters2 != C:
-                print("Projecting identity mapping to correct size")
-                x = tf.nn.avg_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='SAME', data_format='NHWC')
-                x = layers.conv2d(x, num_outputs=filters2, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
-                    activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
-
-            nn = x + nn     # Identity mapping plus residual connection
-            nn = tf.nn.relu(nn)
-
-            print("Image after " + scope + ":", nn.shape)
-            return nn
 
     def forward_pass(self, X, is_training):
         print("Imput image: ", X.shape)
@@ -404,4 +402,45 @@ class DeepResNet (ImageClassifier):
         return self.raw_scores
 
 
+# WideResNet. Ironically, since this architecture is inteded for CIFAR-100, it is actually less wide that the
+    # ResNet18 architecutre above, which was intended for the Full ImangeNet Competition
+class WideResNet22(ResNet):
+    def __init__(self, FLAGS):
+        super().__init__(FLAGS)
+    
+    def name(self):
+        return "WideResNet22"
 
+    def forward_pass(self, X, is_training):
+        print("Input image: ", X.shape)
+        nn = layers.conv2d(X, num_outputs=16, kernel_size=3, stride=2, data_format='NHWC', padding='SAME', \
+            activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+
+        # Residual Layers
+        print("Pre WideResNet: ", nn.shape)
+        k = 4
+        nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer1")
+        nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer2")
+        nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer3")
+        nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer4")
+        nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer5")
+        nn = self.WideResLayer(nn, k, 32, is_training = is_training, stride = 2, scope = "ResLayer6")
+        nn = self.WideResLayer(nn, k, 32, is_training = is_training, scope = "ResLayer7")
+        nn = self.WideResLayer(nn, k, 32, is_training = is_training, scope = "ResLayer8")
+        nn = self.WideResLayer(nn, k, 32, is_training = is_training, scope = "ResLayer9")
+        nn = self.WideResLayer(nn, k, 32, is_training = is_training, scope = "ResLayer10")
+        nn = self.WideResLayer(nn, k, 64, is_training = is_training, stride = 2, scope = "ResLayer11")
+        nn = self.WideResLayer(nn, k, 64, is_training = is_training, scope = "ResLayer12")
+        nn = self.WideResLayer(nn, k, 64, is_training = is_training, scope = "ResLayer13")
+        nn = self.WideResLayer(nn, k, 64, is_training = is_training, scope = "ResLayer14")
+        nn = self.WideResLayer(nn, k, 64, is_training = is_training, scope = "ResLayer15")
+
+        # Output Stem
+        _, H1, W1, _ = nn.shape
+        nn = tf.nn.avg_pool(nn, [1,H1,W1,1], strides=[1,1,1,1], padding='VALID', data_format='NHWC', name="avg_pool")  # Filter size is same as input size
+        nn = layers.flatten(nn)
+        self.raw_scores = layers.fully_connected(inputs = nn, num_outputs = self.FLAGS.n_classes, \
+            activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
+
+        assert (self.raw_scores.get_shape().as_list() == [None, self.FLAGS.n_classes])
+        return self.raw_scores
