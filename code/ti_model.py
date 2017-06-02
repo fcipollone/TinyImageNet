@@ -291,6 +291,15 @@ class Model(object):
                     sys.stdout.write("EPOCH: %d ==> (Avg Loss: %.3f <-> Batch Loss: %.3f) [%-20s] (%d/%d) [norm: %.2f] [lr: %f] [step: %d]"
                         % (cur_epoch + 1, mean_loss, loss, '='*num_complete, min(i*self.FLAGS.batch_size, num_data), num_data, norm, self.current_lr, step))
                     sys.stdout.flush()
+
+                # Save model snapshots
+                if lrHelper.save_snapshot(step):
+                    snapshot_path = os.path.join(checkpoint_path, "snap" + str(lrHelper.snapshot_num(step)))
+                    if not os.path.exists(snapshot_path):
+                        os.makedirs(snapshot_path)
+                    save_path = saver.save(session, os.path.join(snapshot_path, "model.ckpt"))
+                    logging.info("\nSnapshot saved at:  %s \n" % (best_val_acc, save_path))
+
             sys.stdout.write('\n')
 
             # Evaluate accuracy
@@ -308,13 +317,7 @@ class Model(object):
                 save_path = saver.save(session, os.path.join(checkpoint_path, "model.ckpt"))
                 logging.info("New Best Validation Accuracy: %f !!! Best Model saved in file: %s" % (best_val_acc, save_path))
 
-            # Save model snapshots
-            if lrHelper.save_snapshot(step):
-                snapshot_path = os.path.join(checkpoint_path, "snap" + str(lrHelper.snapshot_num(step)))
-                if not os.path.exists(snapshot_path):
-                    os.makedirs(snapshot_path)
-                save_path = saver.save(session, os.path.join(snapshot_path, "model.ckpt"))
-                logging.info("Snapshot saved at:  %s" % (best_val_acc, save_path))
+            
 
 
                 
