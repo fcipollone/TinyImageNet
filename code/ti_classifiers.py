@@ -292,7 +292,7 @@ class ResNet (ImageClassifier):
             return nn
 
 
-    def WideResLayer(self, x, k, filters, stride, scope = "WideResLayer"):
+    def WideResLayer(self, x, k, filters, stride = 1, is_training = True, scope = "ResLayer"):
         with vs.variable_scope(scope):
             C = x.get_shape().as_list()[3]
 
