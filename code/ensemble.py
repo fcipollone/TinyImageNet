@@ -122,7 +122,10 @@ def average_prob():
 
     # write to json file to root dir
     print ("Writing to File")
-    with io.open(pjoin(FLAGS.train_dir, 'tromero1.txt'), 'w') as f:
+    if not os.path.exists("wap_ensemble"):
+        os.makedirs("wap_ensemble")
+    
+    with io.open(pjoin("wap_ensemble", 'tromero1.txt'), 'w') as f:
         for _, (file_name, wnid_prediction) in sorted(answers.items()):
             print(file_name + " " + wnid_prediction, file=f)
 
