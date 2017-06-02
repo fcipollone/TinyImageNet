@@ -41,7 +41,7 @@ class lrManager(object):
             T = self.T
             M = self.FLAGS.M
 
-            if (step+1) % math.ceil(T/M) == 0:
+            if (step) % math.ceil(T/M) == 0 and step != 0:
                 return True
         
         return False
