@@ -66,7 +66,7 @@ def generate_answers(sess, model, dataset):
     test_data = list(zip(dataset["X_test"], dataset["test_image_names"]))
     label_to_wnid = dataset["label_to_wnid"]
 
-    batches, num_batches = get_batches(test_data, FLAGS.batch_size)
+    #batches, num_batches = get_batches(test_data, FLAGS.batch_size)
 
     answers = []
     for img, img_name in tqdm(test_data):

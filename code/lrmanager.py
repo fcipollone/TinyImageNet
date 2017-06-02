@@ -32,8 +32,8 @@ class lrManager(object):
         return lr
 
     def get_standard_lr(self, step):
-        num_decays = math.floor(step / self.D)
-        lr = self.FLAGS.learning_rate * self.decay_ratio ** self.D
+        num_decays = step // self.D
+        lr = self.FLAGS.learning_rate * self.decay_ratio ** num_decays
         return lr
 
     def save_snapshot(self, step):

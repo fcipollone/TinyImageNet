@@ -103,7 +103,7 @@ class Model(object):
         return np.array(outputs)
 
 
-    def crop_classify(self, session, image, top5 = False):
+    def crop_classify(self, session, image, top5 = False, raw_score = False):
         '''
         NOT FOR TRAINING
 
@@ -122,6 +122,9 @@ class Model(object):
 
         scores = self.score(session, crops)
         overall_score = np.mean(scores, axis=0)
+        
+        if raw_score:
+            return overall_score
 
         if not top5:
             pred = np.argmax(overall_score)
