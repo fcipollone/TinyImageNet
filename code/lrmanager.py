@@ -7,19 +7,23 @@ class lrManager(object):
 
         # For cyclic lr
         self.T = self.FLAGS.epochs*(math.ceil(num_data/self.FLAGS.batch_size))
+        if self.FLAGS.cyclic:
+            print("Num steps per cycle: " + str(self.T))
 
         # For standard lr
         decay_every = 10
         self.decay_ratio = 1/float(10)
         self.D = decay_every*(math.ceil(num_data/self.FLAGS.batch_size))
+        if not self.FLAGS.cyclic:
+            print("Num steps per decay: " + str(self.D))
 
-    def get_lr(step):
+    def get_lr(self, step):
         if self.FLAGS.cyclic:
-            get_cyclic_lr(step)
+            return self.get_cyclic_lr(step)
         else:
-            get_standard_lr(step)
+            return self.get_standard_lr(step)
 
-    def get_cyclic_lr(step):
+    def get_cyclic_lr(self, step):
         T = self.T
         M = self.FLAGS.M
         a = self.FLAGS.learning_rate
@@ -27,6 +31,24 @@ class lrManager(object):
         lr = a/2*(math.cos(math.pi*((step-1) % math.ceil(T/M))/math.ceil(T/M))+1)
         return lr
 
-    def get_standard_lr(step):
+    def get_standard_lr(self, step):
         num_decays = math.floor(step / self.D)
         lr = self.FLAGS.learning_rate * self.decay_ratio ** self.D
+        return lr
+
+    def save_snapshot(self, step):
+        if self.FLAGS.cyclic:
+            T = self.T
+            M = self.FLAGS.M
+
+            if (step+1) % math.ceil(T/M) == 0:
+                return True
+        
+        return False
+
+    def snapshot_num(self, step):
+        T = self.T
+        M = self.FLAGS.M
+
+        num = math.floor((step+1) / math.ceil(T/M))
+        return num

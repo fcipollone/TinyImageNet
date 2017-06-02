@@ -308,9 +308,13 @@ class Model(object):
                 save_path = saver.save(session, os.path.join(checkpoint_path, "model.ckpt"))
                 logging.info("New Best Validation Accuracy: %f !!! Best Model saved in file: %s" % (best_val_acc, save_path))
 
-            # Decay learning rate
-            if (cur_epoch % decay_every == 0) and (cur_epoch != 0):
-                self.current_lr *= decay_ratio
-                logging.info("Learning rate decayed to %f !!!" % (self.current_lr))
+            # Save model snapshots
+            if lrHelper.save_snapshot(step):
+                snapshot_path = os.path.join(checkpoint_path, "snap" + str(lrHelper.snapshot_num(step)))
+                if not os.path.exists(snapshot_path):
+                    os.makedirs(snapshot_path)
+                save_path = saver.save(session, os.path.join(snapshot_path, "model.ckpt"))
+                logging.info("Snapshot saved at:  %s" % (best_val_acc, save_path))
+
 
                 
