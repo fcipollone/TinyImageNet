@@ -301,7 +301,7 @@ class ResNet (ImageClassifier):
             nn = layers.conv2d(nn, num_outputs=k*filters, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
                 activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
             
-            #nn = layers.dropout(nn, keep_prob = 0.7, is_training=is_training)
+            nn = layers.dropout(nn, keep_prob = 0.8, is_training=is_training)
                         
             nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
             nn = tf.nn.relu(nn)

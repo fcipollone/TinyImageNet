@@ -11,7 +11,7 @@ class lrManager(object):
             print("Num steps per cycle: " + str(math.ceil(self.T/self.FLAGS.M)))
 
         # For standard lr
-        decay_every = 10
+        decay_every = 25
         self.decay_ratio = 1/float(10)
         self.D = decay_every*(math.ceil(num_data/self.FLAGS.batch_size))
         if not self.FLAGS.cyclic:
