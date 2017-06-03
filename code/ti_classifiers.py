@@ -309,7 +309,7 @@ class ResNet (ImageClassifier):
             nn = layers.conv2d(nn, num_outputs=k*filters, kernel_size=3, stride=1, data_format='NHWC', padding='SAME', \
                 activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
 
-            if stride != 1 or C != filters:
+            if stride != 1:
                 print("Projecting identity mapping to correct size")
                 x = tf.nn.max_pool(x, [1,stride,stride,1], strides=[1,stride,stride,1], padding='SAME', data_format='NHWC') #previously used avg_pool
                 x = layers.conv2d(x, num_outputs=k*filters, kernel_size=1, stride=1, data_format='NHWC', padding='SAME', \
