@@ -301,7 +301,7 @@ class ResNet (ImageClassifier):
             nn = layers.conv2d(nn, num_outputs=k*filters, kernel_size=3, stride=stride, data_format='NHWC', padding='SAME', \
                 activation_fn = None, weights_initializer = self.weight_init(), weights_regularizer = self.weight_decay())
             
-            nn = layers.dropout(nn, keep_prob = 0.8, is_training=is_training)
+            #nn = layers.dropout(nn, keep_prob = 0.8, is_training=is_training)
                         
             nn = layers.batch_norm(nn, decay = 0.9, center = True, scale = True, is_training = is_training, scope = "bn2", activation_fn = None)
             nn = tf.nn.relu(nn)
@@ -414,7 +414,7 @@ class WideResNet32(ResNet):
         return "WideResNet32"
 
     def forward_pass(self, X, is_training):
-        k = 4
+        k = 10
 
         print("Input image: ", X.shape)
         nn = layers.conv2d(X, num_outputs=k*16, kernel_size=3, stride=2, data_format='NHWC', padding='SAME', \
@@ -426,16 +426,13 @@ class WideResNet32(ResNet):
         nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer2")
         nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer3")
         nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer4")
-        nn = self.WideResLayer(nn, k, 16, is_training = is_training, scope = "ResLayer5")
         nn = self.WideResLayer(nn, k, 32, is_training = is_training, stride = 2, scope = "ResLayer6")
         nn = self.WideResLayer(nn, k, 32, is_training = is_training, scope = "ResLayer7")
         nn = self.WideResLayer(nn, k, 32, is_training = is_training, scope = "ResLayer8")
-        nn = self.WideResLayer(nn, k, 32, is_training = is_training, scope = "ResLayer9")
         nn = self.WideResLayer(nn, k, 32, is_training = is_training, scope = "ResLayer10")
         nn = self.WideResLayer(nn, k, 64, is_training = is_training, stride = 2, scope = "ResLayer11")
         nn = self.WideResLayer(nn, k, 64, is_training = is_training, scope = "ResLayer12")
         nn = self.WideResLayer(nn, k, 64, is_training = is_training, scope = "ResLayer13")
-        nn = self.WideResLayer(nn, k, 64, is_training = is_training, scope = "ResLayer14")
         nn = self.WideResLayer(nn, k, 64, is_training = is_training, scope = "ResLayer15")
 
         # Output Stem
