@@ -37,7 +37,7 @@ Evaluation is done on the Dev set.
 
 First, generate answers for the test set questions:
 
-`$ python code/qa_answer.py`
+`$ python code/ti_answer.py`
 
 Then submit to the TinyImageNet competition.
 
