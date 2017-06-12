@@ -6,7 +6,7 @@ Welcome to the Stanford CS231n Project of Tyler Romero, Frank Cipollone, and Zac
 The project has several dependencies that have to be satisfied before running the code. You can install them using your preferred method -- we list here the names of the packages using `pip`.
 
 ## Requirements
-The code provided pressuposes a working installation of Python 2.7, as well as TensorFlow 0.12.1.
+The code provided pressuposes a working installation of Python 3.6, as well as TensorFlow 1.0.
 
 It should also install all needed dependnecies through
 `pip install -r requirements.txt`.
