@@ -40,8 +40,8 @@ First, generate answers for the test set questions:
 Then submit to the TinyImageNet competition.
 
 ## Acknowledgements
-(Deep Residual Learning for Image Recognition)[https://arxiv.org/pdf/1512.03385.pdf]
-(Snapshot Ensembes: Train 1, Get M For Free)[https://arxiv.org/pdf/1704.00109.pdf]
+[Deep Residual Learning for Image Recognition](https://arxiv.org/pdf/1512.03385.pdf)
+[Snapshot Ensembes: Train 1, Get M For Free](https://arxiv.org/pdf/1704.00109.pdf)
 
 
 
